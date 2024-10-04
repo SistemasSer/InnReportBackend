@@ -127,8 +127,6 @@ class BalSupApiViewDetail(APIView):
     #     response = { 'deleted': True }
     #     return Response(status=status.HTTP_204_NO_CONTENT, data=response)
 
-
-
 class BalSupApiViewA(APIView):
     def post(self, request):
         data = request.data
@@ -198,7 +196,6 @@ class BalSupApiViewA(APIView):
 
         final_results = list(transformed_results.values())
         return Response(data=final_results, status=status.HTTP_200_OK)
-
 
 class BalSupApiViewIndicador(APIView):
     def post(self, request):
@@ -551,7 +548,7 @@ class BalSupApiViewIndicadorC(APIView):
                     )
 
         return Response(data=results, status=status.HTTP_200_OK)
-    
+
 class BalSupApiViewBalance(APIView):
     def post(self, request):
         data = request.data

@@ -16,6 +16,7 @@ class PucSupApiView(APIView):
     def get(self, request):
         serializer = PucSupSerializer(PucSupModel.objects.all(), many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
+    
     def post(self, request): 
         #res = request.data.get('name')  
         serializer = PucSupSerializer(data=request.data)
