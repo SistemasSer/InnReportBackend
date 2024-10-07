@@ -52,19 +52,43 @@ def format_nit_dv(nit, dv):
     formatted_nit_dv = f"{nit_str[:3]}-{nit_str[3:6]}-{nit_str[6:]}-{dv_str}"
     return formatted_nit_dv
 
-def get_month_name(month_number):
+# def get_month_name(month_number):
 
+#     month_names = [
+#         "ENERO", "FEBRERO", "MARZO", "ABRIL",
+#         "MAYO", "JUNIO", "JULIO", "AGOSTO",
+#         "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
+#     ]
+    
+#     if 1 <= month_number <= 12:
+#         return month_names[month_number - 1]
+#     else:
+#         raise ValueError("Número de mes inválido. Debe estar entre 1 y 12.")
+
+def get_month_name(month_input):
     month_names = [
         "ENERO", "FEBRERO", "MARZO", "ABRIL",
         "MAYO", "JUNIO", "JULIO", "AGOSTO",
         "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
     ]
     
-    if 1 <= month_number <= 12:
-        return month_names[month_number - 1]
-    else:
-        raise ValueError("Número de mes inválido. Debe estar entre 1 y 12.")
+    # Si el input es un número
+    if isinstance(month_input, int):
+        if 1 <= month_input <= 12:
+            return month_names[month_input - 1]
+        else:
+            raise ValueError("Número de mes inválido. Debe estar entre 1 y 12.")
     
+    # Si el input es un string en mayúsculas
+    elif isinstance(month_input, str):
+        month_input = month_input.upper()
+        if month_input in month_names:
+            return month_names.index(month_input) + 1
+        else:
+            raise ValueError("Nombre de mes inválido. Debe ser uno de los meses en mayúsculas.")
+    
+    else:
+        raise TypeError("El input debe ser un número entero o un string en mayúsculas.")
 
 def clean_currency_value_Decimal(value):
     """
@@ -83,7 +107,26 @@ def clean_currency_value_Decimal(value):
     except InvalidOperation:
         print(f"Error convirtiendo el valor: {value}")
         return Decimal(0)
+
+def get_month_from_date(date_string):
+    # Comprobamos que la cadena tenga el formato adecuado
+    try:
+        # Intentamos separar los componentes de la fecha
+        date_part, time_part = date_string.split('T')
+        year, month, day = date_part.split('-')
+
+        # Convertimos el mes a entero
+        month = int(month)
+
+        # Validamos que el mes esté entre 1 y 12
+        if 1 <= month <= 12:
+            return month
+        else:
+            raise ValueError("Mes inválido. Debe estar entre 1 y 12.")
     
+    except ValueError as e:
+        raise ValueError("Formato de fecha incorrecto o inválido: " + str(e))
+
 def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
     baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/tic6-rbue.json?$limit=500000"
     baseUrl_entidadesFinanciera = "https://www.datos.gov.co/resource/mxk5-ce6w.json?$limit=500000"
@@ -93,7 +136,7 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
     fecha1_str = f"{periodo_actual}-01-01T00:00:00.000"
     fecha2_str = f"{periodo_actual}-12-31T23:59:59.999"  
 
-    # Hacer la consulta para TipoEntidad = 2
+    # Hacer la consulta para Solidaria
     url_tipo2 = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo_actual}' AND codrenglon='{puc_param}'"
     response_tipo2 = requests.get(url_tipo2)
 
@@ -102,7 +145,7 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
     else:
         tipo2_data = response_tipo2.json()
 
-    # Hacer la consulta para otras entidades
+    # Hacer la consulta para Financiera
     url_otras = f"{baseUrl_entidadesFinanciera}&$where=fecha_corte BETWEEN '{fecha1_str}' AND '{fecha2_str}' AND cuenta='{puc_param}' AND moneda ='0'"
     response_otras = requests.get(url_otras)
 
@@ -122,11 +165,11 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
 
             if entity_data:
                 most_recent_data = max(entity_data, key=lambda x: x['mes'])
+                mes_numero = get_month_name(most_recent_data['mes'])
                 saldo_decimal = clean_currency_value_Decimal((most_recent_data['valor_en_pesos']))
                 grupo_activo = determinar_grupo(saldo_decimal)
 
-                # print(f"Entidad solidaria: {entidad}, Saldo: {saldo_decimal}, Grupo Activo: {grupo_activo}")
-                # print(f"Periodo: {periodo_actual}, Mes: {most_recent_data['mes']}")
+                fecha_tamaño = f"{most_recent_data['mes']} - {periodo_actual}"
 
                 entidad_data = {
                     'id': entidad.id,
@@ -138,7 +181,8 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
                     'Gremio': entidad.Gremio,
                     'Grupo_Activo': grupo_activo,
                     'periodo': periodo_actual,
-                    'mes': most_recent_data['mes']
+                    'mes': mes_numero,
+                    'fecha_tamaño': fecha_tamaño
                 }
 
                 if grupo_activo in grupo_activo_values:
@@ -155,11 +199,12 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
 
             if entity_data:
                 most_recent_data = max(entity_data, key=lambda x: datetime.strptime(x['fecha_corte'], '%Y-%m-%dT%H:%M:%S.%f'))
-                saldo_decimal = float(most_recent_data['valor'])  # Asegúrate de que esto sea un número
+                print(most_recent_data['fecha_corte'])
+                mes_numero_financiera = get_month_from_date(most_recent_data['fecha_corte'])
+                saldo_decimal = float(most_recent_data['valor']) 
                 grupo_activo = determinar_grupo(saldo_decimal)
 
-                # print(f"Entidad Financiera: {entidad}, Saldo: {saldo_decimal}, Grupo Activo: {grupo_activo}")
-                # print(f"Periodo: {periodo_actual}, Mes: {most_recent_data['fecha_corte']}")
+                fecha_tamaño = f"{get_month_name(mes_numero_financiera)} - {periodo_actual}"
 
                 entidad_data = {
                     'id': entidad.id,
@@ -171,16 +216,12 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
                     'Gremio': entidad.Gremio,
                     'Grupo_Activo': grupo_activo,
                     'periodo': periodo_actual,
-                    'fecha_corte': most_recent_data['fecha_corte']
+                    'mes': mes_numero_financiera,
+                    'fecha_tamaño': fecha_tamaño
                 }
 
                 if grupo_activo in grupo_activo_values:
                     resultado.append(entidad_data)
-
-    
-    # print("---" * 20)
-    # print("Resultado final:", resultado)
-    # print("---" * 20)
 
     return resultado
 

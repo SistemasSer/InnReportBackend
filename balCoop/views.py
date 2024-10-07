@@ -81,58 +81,47 @@ class BalCoopApiView(APIView):
         
         serializer = BalCoopSerializer(data=data_list, many=True)
         serializer.is_valid(raise_exception=True)
-        
+
+        # Obtener instancias existentes
         existing_instances = BalCoopModel.objects.filter(
             Q(periodo__in=[data['periodo'] for data in data_list]) &
             Q(mes__in=[data['mes'] for data in data_list]) &
-            Q(entidad_RS__in=[data['entidad_RS'] for data in data_list]) &
-            Q(puc_codigo__in=[data['puc_codigo'] for data in data_list])
+            Q(entidad_RS__in=[data['entidad_RS'] for data in data_list])
         )
         
-        existing_dict = {
-            (instance.periodo, instance.mes, instance.entidad_RS, instance.puc_codigo): instance
-            for instance in existing_instances
-        }
-        
+        # Agrupar las instancias existentes
+        existing_dict = defaultdict(list)
+        for instance in existing_instances:
+            key = (instance.periodo, instance.mes, instance.entidad_RS)
+            existing_dict[key].append(instance)
+
         new_instances = []
         update_instances = []
         errors = set()
-        
+
         for data in data_list:
-            key = (data['periodo'], data['mes'], data['entidad_RS'], data['puc_codigo'])
+            key = (data['periodo'], data['mes'], data['entidad_RS'])
             if key in existing_dict:
-                instance = existing_dict[key]
+                instances = existing_dict[key]
                 
-                if is_staff or not all(getattr(instance, field) == data[field] for field in data):
-                    fields_to_update = []
-                    for attr, value in data.items():
-                        if getattr(instance, attr) != value:
-                            setattr(instance, attr, value)
-                            fields_to_update.append(attr)
-                    update_instances.append((instance, fields_to_update))
-                else:
-                    error_message = f"Datos ya existentes para periodo {data['periodo']}, mes {data['mes']}, entidad_RS {data['entidad_RS']}."
-                    errors.add(error_message)
-                    # Si hay un error, detén el procesamiento y devuelve la respuesta
-                    if errors:
-                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"errors": list(errors)})
-            else:
                 if is_staff:
+                    # Si es staff, se permite la actualización
                     new_instances.append(BalCoopModel(**data))
+                    # for instance in instances:
+                    #     fields_to_update = []
+                    #     for attr, value in data.items():
+                    #         if getattr(instance, attr) != value:
+                    #             setattr(instance, attr, value)
+                    #             fields_to_update.append(attr)
+                    #     if fields_to_update:
+                    #         update_instances.append((instance, fields_to_update))
                 else:
-                    if not BalCoopModel.objects.filter(
-                        periodo=data['periodo'],
-                        mes=data['mes'],
-                        entidad_RS=data['entidad_RS'],
-                        puc_codigo=data['puc_codigo']
-                    ).exists():
-                        new_instances.append(BalCoopModel(**data))
-                    else:
-                        error_message = f"Datos ya existentes: {data['entidad_RS']} Año{data['periodo']} - Mes {data['mes']},  ."
-                        errors.add(error_message)
-                        # Si hay un error, detén el procesamiento y devuelve la respuesta
-                        if errors:
-                            return Response(status=status.HTTP_400_BAD_REQUEST, data={"errors": list(errors)})
+                    # No se permite la inserción si ya existe
+                    error_message = f"Datos ya existentes para periodo {data['periodo']}, mes {get_month_name(data['mes'])}, Entidad: {data['entidad_RS']}."
+                    errors.add(error_message)
+            else:
+                # Si no existe, se agrega una nueva instancia
+                new_instances.append(BalCoopModel(**data))
 
         with transaction.atomic():
             if new_instances:
@@ -140,7 +129,7 @@ class BalCoopApiView(APIView):
             if update_instances:
                 for instance, fields_to_update in update_instances:
                     BalCoopModel.objects.bulk_update([instance], fields_to_update)
-        
+
         response_data = {
             "created": len(new_instances),
             "updated": len(update_instances),
