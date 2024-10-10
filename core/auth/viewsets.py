@@ -154,14 +154,12 @@ class ChangePasswordViewSet(viewsets.ViewSet):
 
         if not user.check_password(old_password):
             return Response(
-                # {"detail": "Old password is incorrect."},
                 {"detail": "Contraseña Antigua es incorrecta"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if old_password == new_password:
             return Response(
-                # {"detail": "New password cannot be the same as the old password."},
                 {"detail": "La nueva contraseña no puede ser igual a la anterior"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -172,7 +170,6 @@ class ChangePasswordViewSet(viewsets.ViewSet):
         update_session_auth_hash(request, user)
 
         return Response(
-            # {"detail": "Password has been successfully updated."},
             {"detail": "La contraseña se ha actualizado correctamente."},
             status=status.HTTP_200_OK,
         )

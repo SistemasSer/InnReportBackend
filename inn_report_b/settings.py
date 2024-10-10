@@ -23,8 +23,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ontilys)5*i@9y)mz#h3*d(5cni^*t!3b(1+ha@ilg2py3w3+h'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
+DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 #media
