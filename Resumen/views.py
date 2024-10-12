@@ -81,24 +81,20 @@ class DocumentoDeleteView(generics.DestroyAPIView):
                 {"error": "Documento no encontrado."}, status=status.HTTP_404_NOT_FOUND
             )
 
-
+"""
 class DocumentoDescargaView(APIView):
     def get(self, request, pk, format=None):
         try:
-            # Obtener el documento por ID
             documento = Documento.objects.get(pk=pk)
             archivo_path = documento.archivo.path
 
-            # Comprobar si el archivo existe
             if not os.path.exists(archivo_path):
                 return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
 
-            # Detectar el tipo MIME correcto
             mime_type, _ = mimetypes.guess_type(archivo_path)
             if mime_type is None:
                 mime_type = 'application/octet-stream'
 
-            # Usar FileResponse para servir el archivo
             response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
             response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
             
@@ -109,45 +105,28 @@ class DocumentoDescargaView(APIView):
         except Exception as e:
             logger.error(f"Error inesperado: {str(e)}")
             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+"""
 
+class DocumentoDescargaView(APIView):
+    def get(self, request, pk, format=None):
+        try:
+            documento = Documento.objects.get(pk=pk)
+            archivo_path = documento.archivo.path
 
-# class DocumentoVistaPDF(APIView):
+            if not os.path.exists(archivo_path):
+                return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
 
-#     def get(self, request, documento_id, format=None):
-#         documento = get_object_or_404(Documento, id=documento_id)
-#         input_path = documento.archivo.path
-#         output_path = os.path.join(settings.MEDIA_ROOT, 'archivo', f'{documento_id}.pdf')
+            mime_type, _ = mimetypes.guess_type(archivo_path)
+            if mime_type is None:
+                mime_type = 'application/octet-stream'
 
-#         if not input_path.lower().endswith('.docx'):
-#             return Response({'error': 'El archivo no es un archivo DOCX.'}, status=status.HTTP_400_BAD_REQUEST)
+            response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
+            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
+            
+            return response
 
-#         try:
-#             convert(input_path, output_path)
-#         except Exception as e:
-#             return Response({'error': f'Error al convertir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#         if not os.path.exists(output_path):
-#             return Response({'error': 'El archivo PDF no se pudo generar.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#         response = FileResponse(open(output_path, 'rb'), content_type='application/pdf')
-#         response['Content-Disposition'] = 'inline; filename="documento.pdf"'
-#         return response
-
-# class DocumentoDescargaView(APIView):
-
-#     def get(self, request, pk, format=None):
-#         documento = get_object_or_404(Documento, id=pk)
-#         input_path = documento.archivo.path
-
-#         if not input_path.lower().endswith('.docx'):
-#             return Response({'error': 'El archivo no es un archivo DOCX.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#         if not os.path.exists(input_path):
-#             return Response({'error': 'El archivo DOC no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
-
-#         try:
-#             response = FileResponse(open(input_path, 'rb'), content_type='application/msword')
-#             response['Content-Disposition'] = f'attachment; filename="{pk}.docx"'
-#             return response
-#         except Exception as e:
-#             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Documento.DoesNotExist:
+            raise Http404("Documento no encontrado")
+        except Exception as e:
+            logger.error(f"Error inesperado: {str(e)}")
+            return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
