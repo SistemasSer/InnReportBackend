@@ -23,14 +23,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ontilys)5*i@9y)mz#h3*d(5cni^*t!3b(1+ha@ilg2py3w3+h'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-
 DEBUG = True
+
+# ALLOWED_HOSTS = ['40.117.58.121', 'localhost', '127.0.0.1', 'financieroserlogyc.eastus.cloudapp.azure.com']
 ALLOWED_HOSTS = ['*']
 
 #media
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -66,20 +68,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware' 
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
-
-CORS_ALLOW_METHODS = [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS"
-]
-
 ROOT_URLCONF = 'inn_report_b.urls'
+
 
 TEMPLATES = [
     {
@@ -116,29 +106,19 @@ DATABASES = {
     }
 }
 
-"""
-DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.mysql',
-         'HOST': 'innreportprod.mysql.database.azure.com',
-         'PORT': '3306',
-         'NAME': 'InnReport',
-         'USER': 'Administrador@serlogyc',
-         'PASSWORD': '*Serlogyc-2024*'
-     },
- }
- """
 
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'HOST': 'produccionserlogyc.database.windows.net',
-#         'PORT': '',
-#         'NAME': 'financiero',
-#         'USER': 'Administrador@serlogyc',
-#         'PASSWORD': '*Serlogyc-2021*'
-#     },
-# }
+#      'default': {
+#          'ENGINE': 'django.db.backends.mysql',
+#          'HOST': 'innreportprod.mysql.database.azure.com',
+#          'PORT': '3306',
+#          'NAME': 'InnReport',
+#          'USER': 'Administrador',
+#          'PASSWORD': '*Serlogyc-2024*'
+#      },
+#  }
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -163,11 +143,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -187,7 +164,31 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #   'http://localhost:8000'
 # )
 
+CORS_ALLOW_ALL_ORIGINS = True
 
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:1514",
+#     "http://localhost:3000",
+#     "http://financieroserlogyc.eastus.cloudapp.azure.com:1514",
+# ]
+
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+]
+
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'authorization',
+    'x-csrftoken',
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 AUTH_USER_MODEL = 'core_user.User'
 

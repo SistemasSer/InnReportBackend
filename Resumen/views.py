@@ -7,17 +7,9 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Documento
 from .serializers import DocumentoSerializer
 
-from docx2pdf import convert
-
-from django.conf import settings
-from django.shortcuts import get_object_or_404
-from django.http import FileResponse, HttpResponse, Http404
+from django.http import FileResponse, Http404
 import os
 import mimetypes
-import pypandoc
-import logging
-
-logger = logging.getLogger(__name__)
 
 class DocumentoListCreateView(generics.ListCreateAPIView):
     serializer_class = DocumentoSerializer
@@ -45,24 +37,23 @@ class DocumentoUpdateView(generics.UpdateAPIView):
     serializer_class = DocumentoSerializer
     parser_classes = (MultiPartParser, FormParser)
 
+    def update(self, request, *args, **kwargs):
+        print("Request data:", request.data)  # Imprime los datos de la solicitud
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
 
-def update(self, request, *args, **kwargs):
-    print("Request data:", request.data)  # Imprime los datos de la solicitud
-    instance = self.get_object()
-    serializer = self.get_serializer(instance, data=request.data, partial=True)
-
-    try:
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
-    except Exception as e:
-        print(e)  # Imprime el error en la consola del servidor
-        return Response(
-            {
-                "error": "Ocurrió un error durante la actualización. Por favor, inténtelo de nuevo más tarde."
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data)
+        except Exception as e:
+            print(e)  # Imprime el error en la consola del servidor
+            return Response(
+                {
+                    "error": "Ocurrió un error durante la actualización. Por favor, inténtelo de nuevo más tarde."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class DocumentoDeleteView(generics.DestroyAPIView):
@@ -103,10 +94,10 @@ class DocumentoDescargaView(APIView):
         except Documento.DoesNotExist:
             raise Http404("Documento no encontrado")
         except Exception as e:
-            logger.error(f"Error inesperado: {str(e)}")
             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 """
 
+"""
 class DocumentoDescargaView(APIView):
     def get(self, request, pk, format=None):
         try:
@@ -128,5 +119,33 @@ class DocumentoDescargaView(APIView):
         except Documento.DoesNotExist:
             raise Http404("Documento no encontrado")
         except Exception as e:
-            logger.error(f"Error inesperado: {str(e)}")
+            print(f"Error inesperado: {str(e)}")
+            return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+"""
+
+class DocumentoDescargaView(APIView):
+    def get(self, request, pk, format=None):
+        try:
+            documento = Documento.objects.get(pk=pk)
+            archivo_path = documento.archivo.path
+
+            if not os.path.exists(archivo_path):
+                return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
+
+            mime_type, _ = mimetypes.guess_type(archivo_path)
+            if mime_type is None:
+                mime_type = 'application/octet-stream'
+            
+            # print("-----"*30)
+            # print(f"Archivo: {archivo_path}, Tipo MIME: {mime_type}")
+
+            response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
+            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
+            
+            return response
+
+        except Documento.DoesNotExist:
+            raise Http404("Documento no encontrado")
+        except Exception as e:
+            # print(f"Error inesperado: {str(e)}")
             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
