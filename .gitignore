@@ -1,3 +1,4 @@
 # Ignorar archivo debug.log
 debug.log
 env/
+.vscode/

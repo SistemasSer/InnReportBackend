@@ -85,56 +85,6 @@ class DocumentoDescargaView(APIView):
             mime_type, _ = mimetypes.guess_type(archivo_path)
             if mime_type is None:
                 mime_type = 'application/octet-stream'
-
-            response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
-            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
-            
-            return response
-
-        except Documento.DoesNotExist:
-            raise Http404("Documento no encontrado")
-        except Exception as e:
-            return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-"""
-
-"""
-class DocumentoDescargaView(APIView):
-    def get(self, request, pk, format=None):
-        try:
-            documento = Documento.objects.get(pk=pk)
-            archivo_path = documento.archivo.path
-
-            if not os.path.exists(archivo_path):
-                return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
-
-            mime_type, _ = mimetypes.guess_type(archivo_path)
-            if mime_type is None:
-                mime_type = 'application/octet-stream'
-
-            response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
-            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
-            
-            return response
-
-        except Documento.DoesNotExist:
-            raise Http404("Documento no encontrado")
-        except Exception as e:
-            print(f"Error inesperado: {str(e)}")
-            return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-"""
-
-class DocumentoDescargaView(APIView):
-    def get(self, request, pk, format=None):
-        try:
-            documento = Documento.objects.get(pk=pk)
-            archivo_path = documento.archivo.path
-
-            if not os.path.exists(archivo_path):
-                return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
-
-            mime_type, _ = mimetypes.guess_type(archivo_path)
-            if mime_type is None:
-                mime_type = 'application/octet-stream'
             
             # print("-----"*30)
             # print(f"Archivo: {archivo_path}, Tipo MIME: {mime_type}")
@@ -148,4 +98,27 @@ class DocumentoDescargaView(APIView):
             raise Http404("Documento no encontrado")
         except Exception as e:
             # print(f"Error inesperado: {str(e)}")
+            return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+"""
+
+class DocumentoDescargaView(APIView):
+    def get(self, request, pk, format=None):
+        try:
+            documento = Documento.objects.get(pk=pk)
+            archivo_path = documento.archivo.path
+
+            if not os.path.exists(archivo_path):
+                print(f"Archivo no encontrado: {archivo_path}")
+                return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
+
+            mime_type, _ = mimetypes.guess_type(archivo_path)
+            print(f"Archivo: {archivo_path}, Tipo MIME: {mime_type}")
+            response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
+            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
+            return response
+        except Documento.DoesNotExist:
+            print("Documento no encontrado")
+            raise Http404("Documento no encontrado")
+        except Exception as e:
+            print(f"Error inesperado: {str(e)}")
             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
