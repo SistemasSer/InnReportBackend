@@ -147,7 +147,7 @@ class BalSupApiViewA(APIView):
             all_data = []
 
             response_otras = requests.get(url_otras)
-            print(f"Response: {response_otras.json()}")
+            # print(f"Response: {response_otras.json()}")
 
             if response_otras.status_code == 200:
                 all_data.extend(response_otras.json())

@@ -170,6 +170,7 @@ class BalCoopApiViewDetail(APIView):
     #     response = { 'deleted': True }
     #     return Response(status=status.HTTP_204_NO_CONTENT, data=response)
 
+"""
 class BalCoopApiViewA(APIView):
     def post(self, request):
         data = request.data
@@ -248,14 +249,85 @@ class BalCoopApiViewA(APIView):
                         {"periodo": periodo, "mes": mes_number, "saldo": 0.0}
                     )
 
-        for key, value in transformed_results.items():
-            value["saldos"] = value["saldos"][:6]
+        # for key, value in transformed_results.items():
+        #     value["saldos"] = value["saldos"][:6]
 
         final_results = list(transformed_results.values())
         return Response(data=final_results, status=status.HTTP_200_OK)
 
 def get_saldo(nit_dv, razon_social, cuenta, saldos):
     return saldos.get(nit_dv, {}).get(cuenta, saldos.get(razon_social, {}).get(cuenta, 0))
+"""
+
+class BalCoopApiViewA(APIView):
+    def post(self, request):
+        data = request.data
+        transformed_results = {}
+
+        def get_saldo_from_db(razon_social, periodo, puc_codigo, mes):
+            q_objects = Q(entidad_RS=razon_social, periodo=periodo, puc_codigo=puc_codigo, mes=mes)
+            return BalCoopModel.objects.filter(q_objects).values("periodo", "mes", "saldo")
+
+        for item in data:
+            periodo = int(item.get("periodo")) 
+            mes_number = item.get("mes")
+            mes = get_month_name(mes_number)
+            puc_codigo = item.get("puc_codigo")
+
+            baseUrl_entidadesSolidaria, campoCuenta = self.get_api_params(periodo)
+
+            url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes}' AND {campoCuenta}='{puc_codigo}'"
+            response_otras = requests.get(url_solidaria)
+
+            all_data = response_otras.json() if response_otras.status_code == 200 else []
+
+            for nit_info in item.get("nit", {}).get("solidaria", []):
+                nit = nit_info.get("nit")
+                razon_social = nit_info.get("RazonSocial")
+                sigla = nit_info.get("sigla")
+                dv = nit_info.get("dv")
+
+                formatted_nit_dv = format_nit_dv(nit, dv)
+
+                key = (razon_social, puc_codigo)
+                if key not in transformed_results:
+                    transformed_results[key] = {
+                        "razon_social": razon_social,
+                        "sigla": sigla,
+                        "puc_codigo": puc_codigo,
+                        "saldos": [],
+                    }
+
+                entity_data = [data for data in all_data if data['nit'] == formatted_nit_dv]
+                saldo_en_bd = False
+
+                if entity_data:
+                    for result in entity_data:
+                        saldo = clean_currency_value_Decimal(result.get('valor_en_pesos', '$ 0'))
+                        transformed_results[key]["saldos"].append({"periodo": periodo, "mes": mes_number, "saldo": saldo})
+                else:
+                    query_results = get_saldo_from_db(razon_social, periodo, puc_codigo, mes_number)
+                    if query_results:
+                        # Solo tomar el primer resultado si hay más de uno
+                        first_result = query_results[0]
+                        transformed_results[key]["saldos"].append(
+                            {"periodo": first_result["periodo"], "mes": first_result["mes"], "saldo": float(first_result["saldo"])}
+                        )
+                        saldo_en_bd = True
+
+                if not entity_data and not saldo_en_bd:
+                    transformed_results[key]["saldos"].append({"periodo": periodo, "mes": mes_number, "saldo": 0.0})
+
+        final_results = list(transformed_results.values())
+        return Response(data=final_results, status=status.HTTP_200_OK)
+
+    def get_api_params(self, periodo):
+        if periodo == 2020:
+            return ("https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=500000", 'codcuenta')
+        elif periodo == 2021:
+            return ("https://www.datos.gov.co/resource/irgu-au8v.json?$limit=500000", 'codrenglon')
+        else:
+            return ("https://www.datos.gov.co/resource/tic6-rbue.json?$limit=500000", 'codrenglon')
 
 """
 class BalCoopApiViewIndicador(APIView):
@@ -411,8 +483,7 @@ class BalCoopApiViewIndicador(APIView):
         return Response(data=results, status=status.HTTP_200_OK)
 """
 
-
-
+"""
 # class BalCoopApiViewIndicador(APIView):
 #     def post(self, request):
 #         data = request.data
@@ -572,7 +643,7 @@ class BalCoopApiViewIndicador(APIView):
 #         print(f"     ")
 
 #         return Response(results)
-
+"""
 
 class BalCoopApiViewIndicador(APIView):
     def post(self, request):
@@ -749,7 +820,6 @@ class BalCoopApiViewIndicador(APIView):
 
     def safe_division(self, numerator, denominator):
         return (numerator / denominator * 100) if denominator else 0
-
 
 """
 class BalCoopApiViewIndicadorC(APIView):
