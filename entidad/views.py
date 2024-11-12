@@ -178,6 +178,7 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
                     'RazonSocial': entidad.RazonSocial,
                     'Sigla': entidad.Sigla,
                     'TipoEntidad': entidad.TipoEntidad,
+                    'Departamento': entidad.Departamento,
                     'Gremio': entidad.Gremio,
                     'Grupo_Activo': grupo_activo,
                     'periodo': periodo_actual,
@@ -213,6 +214,7 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
                     'RazonSocial': entidad.RazonSocial,
                     'Sigla': entidad.Sigla,
                     'TipoEntidad': entidad.TipoEntidad,
+                    'Departamento': entidad.Departamento,
                     'Gremio': entidad.Gremio,
                     'Grupo_Activo': grupo_activo,
                     'periodo': periodo_actual,
@@ -229,14 +231,21 @@ class EntidadApiView(APIView):
 
     def get(self, request):
         tipo_entidad_param = request.query_params.getlist("TipoEntidad")
+        departamento_param = request.query_params.getlist("Departamento")
         gremio_param = request.query_params.getlist("Gremio")
         grupo_activo_param = request.query_params.getlist("Grupo_Activo")
         puc_param = request.query_params.get("puc")
 
+
         try:
             tipo_entidad_values = [int(value) for value in tipo_entidad_param] if tipo_entidad_param else []
+            departamento_values = departamento_param if departamento_param else []
             gremio_values = [int(value) for value in gremio_param] if gremio_param else []
             grupo_activo_values = [int(value) for value in grupo_activo_param] if grupo_activo_param else []
+
+            print(f'{tipo_entidad_values}, {departamento_values}, {gremio_values}, {grupo_activo_values}')
+            # print(f'{tipo_entidad_values}, {gremio_values}, {grupo_activo_values}')
+
         except ValueError:
             return Response(
                 status=status.HTTP_400_BAD_REQUEST,
@@ -247,16 +256,24 @@ class EntidadApiView(APIView):
 
         if tipo_entidad_values:
             queryset = queryset.filter(TipoEntidad__in=tipo_entidad_values)
+            print(f"Entidades: {len(queryset)}") 
+
+        if departamento_values:
+            queryset = queryset.filter(Departamento__in=departamento_values)
+            print(f"Entidades: {len(queryset)}")    
 
         if gremio_values:
             queryset = queryset.filter(Gremio__in=gremio_values)
+            print(f"Entidades: {len(queryset)}") 
 
         if grupo_activo_values:
             # print(f"QUERY: {queryset}, PUC: {puc_param}, Grupo Activo: {grupo_activo_values}")
             resultado = obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values)
+            print(f"Entidades: {len(resultado)}")            
             return Response(status=status.HTTP_200_OK, data=resultado)
         else:
-            entidades = queryset.values('id', 'Nit', 'Dv', 'RazonSocial', 'Sigla', 'TipoEntidad', 'Gremio')
+            entidades = queryset.values('id', 'Nit', 'Dv', 'RazonSocial', 'Sigla', 'TipoEntidad', 'Departamento', 'Gremio')
+
             return Response(status=status.HTTP_200_OK, data=list(entidades))
 
     def post(self, request):

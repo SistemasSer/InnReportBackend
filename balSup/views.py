@@ -189,7 +189,7 @@ class BalSupApiViewA(APIView):
                             saldo_en_bd = True
                 if not entity_data and not saldo_en_bd:
                     transformed_results[key]["saldos"].append(
-                        {"periodo": periodo, "mes": mes, "saldo": 0.0}
+                        {"periodo": periodo, "mes": mes, "saldo": 0}
                     )
         for key, value in transformed_results.items():
             value["saldos"] = value["saldos"][:6]
@@ -713,7 +713,9 @@ class BalSupApiViewIndicadorC(APIView):
         data = request.data
         results = []
 
-        puc_codes_current = ["140800", "140805", "140810", "140815", "140820", "140825","149100", "141200", "141205", "141210", "141215", "141220","141225", "149300", "141000", "141005", "141010", "141015","141020", "141025", "149500", "140200", "140205", "140210","140215", "140220", "140225", "148900", "140400", "140405","140410", "140415", "140420", "140425", "141400", "141405","141410", "141415", "141420", "141425", "148800", "141430","141435", "141440", "141445", "141450", "141460", "141465","141470", "141475", "141480", "812000",]
+        # puc_codes_current = ["140800", "140805", "140810", "140815", "140820", "140825","149100", "141200", "141205", "141210", "141215", "141220","141225", "149300", "141000", "141005", "141010", "141015","141020", "141025", "149500", "140200", "140205", "140210","140215", "140220", "140225", "148900", "140400", "140405","140410", "140415", "140420", "140425", "141400", "141405","141410", "141415", "141420", "141425", "148800", "141430","141435", "141440", "141445", "141450", "141460", "141465","141470", "141475", "141480", "812000",]
+
+        puc_codes_current = ["140800", "140805", "140810", "140815", "140820", "140825","149100", "141200", "141205", "141210", "141215", "141220","141225", "149300", "141000", "141005", "141010", "141015","141020", "141025", "149500", "140200", "140205", "140210","140215", "140220", "140225", "148900", "140400", "140405","140410", "140415", "140420", "140425", "140430", "140435", "140440", "140445", "140450", "141400", "141405","141410", "141415", "141420", "141425", "148800", "141430","141435", "141440", "141445", "141450", "141460", "141465","141470", "141475", "141480", "812000",]
 
         for item in data:
             periodo = int(item.get("periodo"))
@@ -796,6 +798,7 @@ class BalSupApiViewIndicadorC(APIView):
         def safe_division(numerator, denominator):
             return (numerator / denominator * 100) if denominator else 0
 
+        #Consumo
         consumo_a = saldos_current[razon_social]["140805"]
         consumo_b = saldos_current[razon_social]["140810"]
         consumo_c = saldos_current[razon_social]["140815"]
@@ -838,12 +841,25 @@ class BalSupApiViewIndicadorC(APIView):
         comercial_porc_cobertura = safe_division(comercial_deterioro, denominator_comercial_porc_cobertura)
 
         #vivienda 
-        vivienda_a = saldos_current[razon_social]["140205"] + saldos_current[razon_social]["140405"]
-        vivienda_b = saldos_current[razon_social]["140210"] + saldos_current[razon_social]["140410"]
-        vivienda_c = saldos_current[razon_social]["140215"] + saldos_current[razon_social]["140415"]
-        vivienda_d = saldos_current[razon_social]["140220"] + saldos_current[razon_social]["140420"]
-        vivienda_e = saldos_current[razon_social]["140225"] + saldos_current[razon_social]["140425"]
-        vivienda_total = saldos_current[razon_social]["140200"] + saldos_current[razon_social]["140400"]
+        # vivienda_a = saldos_current[razon_social]["140205"] + saldos_current[razon_social]["140405"]
+        # vivienda_b = saldos_current[razon_social]["140210"] + saldos_current[razon_social]["140410"]
+        # vivienda_c = saldos_current[razon_social]["140215"] + saldos_current[razon_social]["140415"]
+        # vivienda_d = saldos_current[razon_social]["140220"] + saldos_current[razon_social]["140420"]
+        # vivienda_e = saldos_current[razon_social]["140225"] + saldos_current[razon_social]["140425"]
+        # vivienda_total = saldos_current[razon_social]["140200"] + saldos_current[razon_social]["140400"]
+        # vivienda_deterioro = saldos_current[razon_social]["148900"]
+        # denominator_vivienda_ind_mora = (vivienda_a + vivienda_b + vivienda_c + vivienda_d + vivienda_e)
+        # vivienda_ind_mora = safe_division((vivienda_b + vivienda_c + vivienda_d + vivienda_e), denominator_vivienda_ind_mora)
+        # vivienda_cartera_improductiva = safe_division((vivienda_c + vivienda_d + vivienda_e), denominator_vivienda_ind_mora)
+        # denominator_vivienda_porc_cobertura = (vivienda_b + vivienda_c + vivienda_d + vivienda_e)
+        # vivienda_porc_cobertura = safe_division(vivienda_deterioro, denominator_vivienda_porc_cobertura)
+
+        vivienda_a = saldos_current[razon_social]["140405"] + saldos_current[razon_social]["140410"]
+        vivienda_b = saldos_current[razon_social]["140415"] + saldos_current[razon_social]["140420"]
+        vivienda_c = saldos_current[razon_social]["140425"] + saldos_current[razon_social]["140430"]
+        vivienda_d = saldos_current[razon_social]["140435"] + saldos_current[razon_social]["140440"]
+        vivienda_e = saldos_current[razon_social]["140445"] + saldos_current[razon_social]["140450"]
+        vivienda_total = saldos_current[razon_social]["140400"]
         vivienda_deterioro = saldos_current[razon_social]["148900"]
         denominator_vivienda_ind_mora = (vivienda_a + vivienda_b + vivienda_c + vivienda_d + vivienda_e)
         vivienda_ind_mora = safe_division((vivienda_b + vivienda_c + vivienda_d + vivienda_e), denominator_vivienda_ind_mora)
@@ -858,7 +874,8 @@ class BalSupApiViewIndicadorC(APIView):
         empleados_c = (saldos_current[razon_social]["141415"] + saldos_current[razon_social]["141440"] + saldos_current[razon_social]["141470"])
         empleados_d = (saldos_current[razon_social]["141420"] + saldos_current[razon_social]["141445"] + saldos_current[razon_social]["141475"])
         empleados_e = (saldos_current[razon_social]["141425"] + saldos_current[razon_social]["141450"] + saldos_current[razon_social]["141480"])
-        empleados_total = (saldos_current[razon_social]["141400"] + saldos_current[razon_social]["141200"])
+        # empleados_total = (saldos_current[razon_social]["141400"] + saldos_current[razon_social]["141200"])
+        empleados_total = (saldos_current[razon_social]["141400"])
         empleados_deterioro = saldos_current[razon_social]["149100"]
         denominator_empleados_ind_mora = (empleados_a + empleados_b + empleados_c + empleados_d + empleados_e)
         empleados_ind_mora = safe_division((empleados_b + empleados_c + empleados_d + empleados_e), denominator_empleados_ind_mora)
