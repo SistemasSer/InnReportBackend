@@ -1555,8 +1555,98 @@ class BalCoopApiViewIndicadorC(APIView):
     def safe_division(self, numerator, denominator):
         return (numerator / denominator * 100) if denominator else 0
 
+# class BalCoopApiViewBalanceCuenta(APIView):
+#     def post(self, request):
+#         data = request.data
+#         entidades_Solidaria = data.get("entidad", {}).get("solidaria", [])
+#         periodo = data.get("año")
+#         mes = data.get("mes")
+#         mes_str = get_month_name(mes)
+#         pucCodigo = data.get("pucCodigo")
+#         pucName = data.get("pucName")
+#         results = []
 
-class BalCoopApiViewBalance(APIView):
+#         if periodo == 2020:
+#             baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=100000"
+#             campoCuenta = 'codcuenta'
+#         elif periodo == 2021:
+#             baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/irgu-au8v.json?$limit=100000"
+#             campoCuenta = 'codrenglon'
+#         else:
+#             baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/tic6-rbue.json?$limit=100000"
+#             campoCuenta = 'codrenglon'
+
+#         url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes_str}' AND {campoCuenta}='{pucCodigo}'"
+#         response_Solidaria = requests.get(url_solidaria)
+
+#         saldos_current = defaultdict(Decimal)
+#         if response_Solidaria.status_code == 200:
+#             all_data = response_Solidaria.json()
+
+#             for result in all_data:
+#                 nit = result.get("nit")
+#                 valor_en_pesos = result.get('valor_en_pesos', '$ 0')
+#                 total_saldo = clean_currency_value_Decimal(valor_en_pesos)
+#                 saldos_current[nit] += total_saldo
+#         else:
+#             print("No data fetched from API.")
+
+#         for nit_info in entidades_Solidaria:
+#             razon_social = nit_info.get("RazonSocial")
+#             if razon_social not in saldos_current:
+#                 q_current_period = Q(entidad_RS=razon_social, periodo=periodo, mes=mes) & Q(puc_codigo=pucCodigo)
+#                 query_results_current = BalCoopModel.objects.filter(q_current_period).values("puc_codigo").annotate(total_saldo=Sum("saldo"))
+
+#                 for result in query_results_current:
+#                     saldos_current[razon_social] += result["total_saldo"]
+
+#         entidades = []
+#         for nit_info in entidades_Solidaria:
+#             razon_social = nit_info.get("RazonSocial")
+#             nit = nit_info.get("nit")
+#             dv = nit_info.get("dv")
+#             formatted_nit_dv = format_nit_dv(nit, dv)
+#             saldo = saldos_current.get(formatted_nit_dv, saldos_current.get(razon_social, 0))
+#             entidades.append({
+#                 "nit": nit_info.get("nit"),
+#                 "sigla": nit_info.get("sigla"),
+#                 "RazonSocial": razon_social,
+#                 "saldo": saldo
+#             })
+#         results.append({
+#             "año": periodo,
+#             "mes": mes,
+#             "puc_codigo": pucCodigo,
+#             "pucName": pucName,
+#             "entidades": entidades
+#         })
+
+#         return Response(data=results, status=status.HTTP_200_OK)
+
+class BalCoopApiViewBalanceCuenta(APIView):
+    def get_saldos_solidaria(self, url):
+        """Generador para obtener saldos de la API y evitar cargar todo en memoria."""
+        response = requests.get(url)
+        if response.status_code == 200:
+            for result in response.json():
+                nit = result.get("nit")
+                valor_en_pesos = result.get('valor_en_pesos', '$ 0')
+                total_saldo = clean_currency_value_Decimal(valor_en_pesos)
+                yield nit, total_saldo
+        else:
+            print("No data fetched from API.")
+    
+    def get_saldos_locales(self, entidades_Solidaria, periodo, mes, pucCodigo):
+        for nit_info in entidades_Solidaria:
+            razon_social = nit_info.get("RazonSocial")
+            q_current_period = Q(entidad_RS=razon_social, periodo=periodo, mes=mes) & Q(puc_codigo=pucCodigo)
+
+            query_results_current = BalCoopModel.objects.filter(q_current_period).values("puc_codigo", "saldo")
+
+            for result in query_results_current:
+                yield razon_social, result["saldo"]
+                break
+
     def post(self, request):
         data = request.data
         entidades_Solidaria = data.get("entidad", {}).get("solidaria", [])
@@ -1567,6 +1657,7 @@ class BalCoopApiViewBalance(APIView):
         pucName = data.get("pucName")
         results = []
 
+        # Determinar URL y campo según el año
         if periodo == 2020:
             baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=100000"
             campoCuenta = 'codcuenta'
@@ -1577,30 +1668,20 @@ class BalCoopApiViewBalance(APIView):
             baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/tic6-rbue.json?$limit=100000"
             campoCuenta = 'codrenglon'
 
+        # Construir la URL para la consulta
         url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes_str}' AND {campoCuenta}='{pucCodigo}'"
-        response_Solidaria = requests.get(url_solidaria)
 
+        # Procesar saldos desde la API con generador
         saldos_current = defaultdict(Decimal)
-        if response_Solidaria.status_code == 200:
-            all_data = response_Solidaria.json()
+        for nit, total_saldo in self.get_saldos_solidaria(url_solidaria):
+            saldos_current[nit] += total_saldo
 
-            for result in all_data:
-                nit = result.get("nit")
-                valor_en_pesos = result.get('valor_en_pesos', '$ 0')
-                total_saldo = clean_currency_value_Decimal(valor_en_pesos)
-                saldos_current[nit] += total_saldo
-        else:
-            print("No data fetched from API.")
-
-        for nit_info in entidades_Solidaria:
-            razon_social = nit_info.get("RazonSocial")
+        # Procesar saldos locales con generador
+        for razon_social, total_saldo in self.get_saldos_locales(entidades_Solidaria, periodo, mes, pucCodigo):
             if razon_social not in saldos_current:
-                q_current_period = Q(entidad_RS=razon_social, periodo=periodo, mes=mes) & Q(puc_codigo=pucCodigo)
-                query_results_current = BalCoopModel.objects.filter(q_current_period).values("puc_codigo").annotate(total_saldo=Sum("saldo"))
+                saldos_current[razon_social] = total_saldo 
 
-                for result in query_results_current:
-                    saldos_current[razon_social] += result["total_saldo"]
-
+        # Preparar el resultado final
         entidades = []
         for nit_info in entidades_Solidaria:
             razon_social = nit_info.get("RazonSocial")
@@ -1614,6 +1695,8 @@ class BalCoopApiViewBalance(APIView):
                 "RazonSocial": razon_social,
                 "saldo": saldo
             })
+        
+        # Formar la respuesta final
         results.append({
             "año": periodo,
             "mes": mes,

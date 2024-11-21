@@ -715,7 +715,7 @@ class BalSupApiViewIndicadorC(APIView):
 
         # puc_codes_current = ["140800", "140805", "140810", "140815", "140820", "140825","149100", "141200", "141205", "141210", "141215", "141220","141225", "149300", "141000", "141005", "141010", "141015","141020", "141025", "149500", "140200", "140205", "140210","140215", "140220", "140225", "148900", "140400", "140405","140410", "140415", "140420", "140425", "141400", "141405","141410", "141415", "141420", "141425", "148800", "141430","141435", "141440", "141445", "141450", "141460", "141465","141470", "141475", "141480", "812000",]
 
-        puc_codes_current = ["140800", "140805", "140810", "140815", "140820", "140825","149100", "141200", "141205", "141210", "141215", "141220","141225", "149300", "141000", "141005", "141010", "141015","141020", "141025", "149500", "140200", "140205", "140210","140215", "140220", "140225", "148900", "140400", "140405","140410", "140415", "140420", "140425", "140430", "140435", "140440", "140445", "140450", "141400", "141405","141410", "141415", "141420", "141425", "148800", "141430","141435", "141440", "141445", "141450", "141460", "141465","141470", "141475", "141480", "812000",]
+        puc_codes_current = ["140800", "140805", "140810", "140815", "140820", "140825","149100", "141200", "141205", "141210", "141215", "141220","141225", "149300", "141000", "141005", "141010", "141015","141020", "141025", "149500", "148900", "140400", "140405","140410", "140415", "140420", "140425", "140430", "140435", "140440", "140445", "140450", "141400", "141405","141410", "141415", "141420", "141425", "148800", "141430","141435", "141440", "141445", "141450", "141460", "141465","141470", "141475", "141480", "812000",]
 
         for item in data:
             periodo = int(item.get("periodo"))
@@ -867,7 +867,6 @@ class BalSupApiViewIndicadorC(APIView):
         denominator_vivienda_porc_cobertura = (vivienda_b + vivienda_c + vivienda_d + vivienda_e)
         vivienda_porc_cobertura = safe_division(vivienda_deterioro, denominator_vivienda_porc_cobertura)
 
-
         #EMPLEADOS
         empleados_a = (saldos_current[razon_social]["141405"] + saldos_current[razon_social]["141430"] + saldos_current[razon_social]["141460"])
         empleados_b = (saldos_current[razon_social]["141410"] + saldos_current[razon_social]["141435"] + saldos_current[razon_social]["141465"])
@@ -960,7 +959,7 @@ class BalSupApiViewIndicadorC(APIView):
             "totalPorcCobertura": total_porc_cobertura,
         }
 
-class BalSupApiViewBalance(APIView):
+class BalSupApiViewBalanceCuenta(APIView):
     def post(self, request):
         data = request.data
         results = []
@@ -977,49 +976,125 @@ class BalSupApiViewBalance(APIView):
         fecha2 = (fecha1 + timedelta(days=31)).replace(day=1) - timedelta(days=1)
         fecha1_str = fecha1.strftime("%Y-%m-%dT00:00:00")
         fecha2_str = fecha2.strftime("%Y-%m-%dT23:59:59")
-        # Consultar API
-        url_financiera = f"{baseUrl_entidadesFinanciera}&$where=fecha_corte BETWEEN '{fecha1_str}' AND '{fecha2_str}' AND cuenta ='{pucCodigo}' AND moneda ='0'"
-        response_financiera = requests.get(url_financiera)
+        
+        # Generador para obtener saldos desde la API externa
+        def obtener_saldos_api():
+            url_financiera = f"{baseUrl_entidadesFinanciera}&$where=fecha_corte BETWEEN '{fecha1_str}' AND '{fecha2_str}' AND cuenta ='{pucCodigo}' AND moneda ='0'"
+            response_financiera = requests.get(url_financiera)
 
+            if response_financiera.status_code == 200:
+                all_data = response_financiera.json()
+                for result in all_data:
+                    razon_social = result.get("nombre_entidad")
+                    total_saldo = Decimal(result.get("valor", 0))
+                    yield razon_social, total_saldo
+            else:
+                print("No data fetched from API.")
+
+        # Generador para obtener saldos desde la base de datos
+        def obtener_saldos_db():
+            for nit_info in entidades_financieras:
+                razon_social = nit_info.get("RazonSocial")
+                q_current_period = Q(entidad_RS=razon_social, periodo=periodo, mes=mes) & Q(puc_codigo=pucCodigo)
+                # query_results_current = BalSupModel.objects.filter(q_current_period).values("puc_codigo").annotate(total_saldo=Sum("saldo"))
+                query_results_current = BalSupModel.objects.filter(q_current_period).values("puc_codigo", "saldo")
+
+                # for result in query_results_current:
+                #     yield razon_social, result["total_saldo"]
+                
+                for result in query_results_current:
+                    yield razon_social, result["saldo"]
+                    break
+
+        # Combinar saldos desde API y base de datos
         saldos_current = defaultdict(Decimal)
 
-        if response_financiera.status_code == 200:
-            all_data = response_financiera.json()
+        # Añadir saldos de la API externa
+        for razon_social, total_saldo in obtener_saldos_api():
+            saldos_current[razon_social] += total_saldo
 
-            for result in all_data:
-                razon_social = result.get("nombre_entidad")
-                total_saldo = Decimal(result.get("valor", 0))
-                saldos_current[razon_social] += total_saldo
-        else:
-            print("No data fetched from API.")
+        # Añadir saldos desde la base de datos
+        for razon_social, total_saldo in obtener_saldos_db():
+            saldos_current[razon_social] += total_saldo
 
-        for nit_info in entidades_financieras:
-            razon_social = nit_info.get("RazonSocial")
-            if razon_social not in saldos_current:
-                q_current_period = Q(entidad_RS=razon_social, periodo=periodo, mes=mes) & Q(puc_codigo=pucCodigo)
-                query_results_current = BalSupModel.objects.filter(q_current_period).values("puc_codigo").annotate(total_saldo=Sum("saldo"))
+        # Generador para crear la lista de resultados formateados
+        def formatear_resultados():
+            for nit_info in entidades_financieras:
+                razon_social = nit_info.get("RazonSocial")
+                saldo = saldos_current.get(razon_social, 0)
+                yield {
+                    "nit": nit_info.get("nit"),
+                    "sigla": nit_info.get("sigla"),
+                    "RazonSocial": razon_social,
+                    "saldo": saldo
+                }
 
-                for result in query_results_current:
-                    saldos_current[razon_social] += result["total_saldo"]
-
-        # Formatear resultados
-        entidades = []
-        for nit_info in entidades_financieras:
-            razon_social = nit_info.get("RazonSocial")
-            saldo = saldos_current.get(razon_social, 0)
-            entidades.append({
-                "nit": nit_info.get("nit"),
-                "sigla": nit_info.get("sigla"),
-                "RazonSocial": razon_social,
-                "saldo": saldo
-            })
-
+        # Formatear los resultados finales
+        resultados_entidades = list(formatear_resultados())
+        
+        # Crear el resultado final
         results.append({
             "año": periodo,
             "mes": mes,
             "puc_codigo": pucCodigo,
             "pucName": pucName,
-            "entidades": entidades
+            "entidades": resultados_entidades
         })
+
+        return Response(data=results, status=status.HTTP_200_OK)
+
+class BalSupApiViewBalanceIndependiente(APIView):
+    def post(self, request):
+        data = request.data
+        results = []
+        baseUrl_entidadesFinanciera = "https://www.datos.gov.co/resource/mxk5-ce6w.json?$limit=500000"
+
+        entidad_financiera = data.get("entidad", {}).get("superfinanciera", [])
+        periodo = data.get("año")
+        mes = data.get("mes")
+        Razon_Social = entidad_financiera[0].get("RazonSocial")
+
+        fecha1 = datetime(periodo, mes, 1)
+        fecha2 = (fecha1 + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+        fecha1_str = fecha1.strftime("%Y-%m-%dT00:00:00")
+        fecha2_str = fecha2.strftime("%Y-%m-%dT23:59:59")
+
+        def obtener_saldos_api():
+            url_financiera = f"{baseUrl_entidadesFinanciera}&$where=fecha_corte BETWEEN '{fecha1_str}' AND '{fecha2_str}' AND nombre_entidad = '{Razon_Social}' AND moneda = '0'"
+
+            response_financiera = requests.get(url_financiera)
+
+            if response_financiera.status_code == 200:
+                all_data = response_financiera.json()
+                for result in all_data:
+                    razon_social = result.get("nombre_entidad")
+                    cuenta = result.get("cuenta")
+                    # nombre_cuenta = result.get("nombre_cuenta")
+                    valor = Decimal(result.get("valor", 0))
+                    # yield razon_social, cuenta, nombre_cuenta, valor
+                    yield razon_social, cuenta, valor
+            else:
+                print(f"Error al obtener datos de la API. Status code: {response_financiera.status_code}")
+
+        cuentas_detalles = []
+
+        # for razon_social, cuenta, nombre_cuenta, valor in obtener_saldos_api():
+        for razon_social, cuenta, valor in obtener_saldos_api():
+            # cuentas_detalles.append({"cuenta": cuenta, "nombre_cuenta": nombre_cuenta, "valor": valor})
+            cuentas_detalles.append({"cuenta": cuenta, "valor": valor})
+
+        cuentas_detalles = sorted(cuentas_detalles, key=lambda x: x["cuenta"])
+
+        for entidad in entidad_financiera:
+            razon_social = entidad.get("RazonSocial")
+
+            results.append({
+                "año": periodo,
+                "mes": mes,
+                "nit": entidad.get("nit"),
+                "sigla": entidad.get("sigla"),
+                "RazonSocial": razon_social,
+                "cuentas_detalles": cuentas_detalles
+            })
 
         return Response(data=results, status=status.HTTP_200_OK)
