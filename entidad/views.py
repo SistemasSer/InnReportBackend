@@ -256,20 +256,12 @@ class EntidadApiView(APIView):
 
         if tipo_entidad_values:
             queryset = queryset.filter(TipoEntidad__in=tipo_entidad_values)
-            print(f"Entidades: {len(queryset)}") 
-
         if departamento_values:
             queryset = queryset.filter(Departamento__in=departamento_values)
-            print(f"Entidades: {len(queryset)}")    
-
         if gremio_values:
             queryset = queryset.filter(Gremio__in=gremio_values)
-            print(f"Entidades: {len(queryset)}") 
-
         if grupo_activo_values:
-            # print(f"QUERY: {queryset}, PUC: {puc_param}, Grupo Activo: {grupo_activo_values}")
-            resultado = obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values)
-            print(f"Entidades: {len(resultado)}")            
+            resultado = obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values)         
             return Response(status=status.HTTP_200_OK, data=resultado)
         else:
             entidades = queryset.values('id', 'Nit', 'Dv', 'RazonSocial', 'Sigla', 'TipoEntidad', 'Departamento', 'Gremio')
@@ -278,10 +270,8 @@ class EntidadApiView(APIView):
 
     def post(self, request):
         serializer = EntidadSerializer(data=request.data)
-
         serializer.is_valid(raise_exception=True)
         serializer.save()
-
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
 
