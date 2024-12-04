@@ -1,25 +1,27 @@
+import logging
+from rest_framework import viewsets, status, generics
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import AllowAny
-from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from core.auth.serializers import (
     LoginSerializer,
     RegisterSerializer,
-    UserUpdateSerializer,
     UserSerializer,
-    ChangePasswordSerializer,
+    UserSerializerUpdate,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from core.user.models import User
 
 from django.contrib.auth import update_session_auth_hash
 
+logger = logging.getLogger(__name__)
 
 class LoginViewSet(ModelViewSet, TokenObtainPairView):
     serializer_class = LoginSerializer
@@ -70,34 +72,6 @@ class RegistrationViewSet(ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-
-# class RegistrationViewSet(ModelViewSet):
-#     serializer_class = RegisterSerializer
-#     permission_classes = (AllowAny,)
-#     http_method_names = ["post"]
-
-#     def create(self, request, *args, **kwargs):
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         user = serializer.save()
-
-#         # Generar tokens JWT para el nuevo usuario
-#         refresh = RefreshToken.for_user(user)
-#         res = {
-#             "refresh": str(refresh),
-#             "access": str(refresh.access_token),
-#         }
-
-#         return Response(
-#             {
-#                 "user": serializer.data,
-#                 "refresh": res["refresh"],
-#                 "token": res["access"],
-#             },
-#             status=status.HTTP_201_CREATED,
-#         )
-
-
 class RefreshViewSet(viewsets.ViewSet, TokenRefreshView):
     permission_classes = (AllowAny,)
     http_method_names = ["post"]
@@ -111,7 +85,6 @@ class RefreshViewSet(viewsets.ViewSet, TokenRefreshView):
             raise InvalidToken(e.args[0])
 
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
-
 
 class UserUpdateViewSet(viewsets.ViewSet):
 
@@ -138,7 +111,6 @@ class UserUpdateViewSet(viewsets.ViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class ChangePasswordViewSet(viewsets.ViewSet):
     def partial_update(self, request, pk=None):
@@ -173,3 +145,48 @@ class ChangePasswordViewSet(viewsets.ViewSet):
             {"detail": "La contraseña se ha actualizado correctamente."},
             status=status.HTTP_200_OK,
         )
+
+class UserPasswordUpdateView(viewsets.ViewSet):
+    permission_classes = (AllowAny,)
+
+    def partial_update(self, request, pk=None):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if "email" in request.data:
+            email = request.data["email"]
+            if User.objects.filter(email=email).exclude(pk=pk).exists():
+                return Response(
+                    {"detail": "El correo electrónico ya está en uso."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        original_password = user.password
+        serializer = UserSerializerUpdate(user, data=request.data, partial=True)
+
+        new_password = request.data.get("new_password")
+        if new_password:
+            if new_password == "":
+                return Response(
+                    {"detail": "La nueva contraseña no puede estar vacía"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user.set_password(new_password)
+
+        if serializer.is_valid():
+            serializer.save()
+            user.save()
+            update_session_auth_hash(request, user)
+
+            if user.password != original_password:
+                password_message = "La contraseña ha sido actualizada."
+            else:
+                password_message = "La contraseña sigue siendo la misma."
+
+            response_data = serializer.data
+            response_data["password_status"] = password_message
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

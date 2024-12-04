@@ -3,3 +3,4 @@ debug.log
 env/
 .vscode/
 media/archivo/
+*.pyc

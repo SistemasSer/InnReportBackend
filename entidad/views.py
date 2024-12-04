@@ -4,7 +4,7 @@ from django.db.models import Case, When, IntegerField, DecimalField, Value, Subq
 from django.db.models.functions import Coalesce
 from decimal import Decimal, InvalidOperation
 from datetime import datetime
-from rest_framework import serializers
+from rest_framework import serializers, generics
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -43,27 +43,11 @@ def determinar_grupo(saldo):
 
     
 def format_nit_dv(nit, dv):
-    """
-    Formatea el NIT y el DV en el formato 'NNN-NNN-NNN-N'.
-    """
     nit_str = str(nit).zfill(9)
     dv_str = str(dv).zfill(1) 
 
     formatted_nit_dv = f"{nit_str[:3]}-{nit_str[3:6]}-{nit_str[6:]}-{dv_str}"
     return formatted_nit_dv
-
-# def get_month_name(month_number):
-
-#     month_names = [
-#         "ENERO", "FEBRERO", "MARZO", "ABRIL",
-#         "MAYO", "JUNIO", "JULIO", "AGOSTO",
-#         "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
-#     ]
-    
-#     if 1 <= month_number <= 12:
-#         return month_names[month_number - 1]
-#     else:
-#         raise ValueError("Número de mes inválido. Debe estar entre 1 y 12.")
 
 def get_month_name(month_input):
     month_names = [
@@ -71,15 +55,13 @@ def get_month_name(month_input):
         "MAYO", "JUNIO", "JULIO", "AGOSTO",
         "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
     ]
-    
-    # Si el input es un número
+
     if isinstance(month_input, int):
         if 1 <= month_input <= 12:
             return month_names[month_input - 1]
         else:
             raise ValueError("Número de mes inválido. Debe estar entre 1 y 12.")
-    
-    # Si el input es un string en mayúsculas
+
     elif isinstance(month_input, str):
         month_input = month_input.upper()
         if month_input in month_names:
@@ -109,16 +91,11 @@ def clean_currency_value_Decimal(value):
         return Decimal(0)
 
 def get_month_from_date(date_string):
-    # Comprobamos que la cadena tenga el formato adecuado
     try:
-        # Intentamos separar los componentes de la fecha
         date_part, time_part = date_string.split('T')
         year, month, day = date_part.split('-')
 
-        # Convertimos el mes a entero
         month = int(month)
-
-        # Validamos que el mes esté entre 1 y 12
         if 1 <= month <= 12:
             return month
         else:
@@ -136,7 +113,6 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
     fecha1_str = f"{periodo_actual}-01-01T00:00:00.000"
     fecha2_str = f"{periodo_actual}-12-31T23:59:59.999"  
 
-    # Hacer la consulta para Solidaria
     url_tipo2 = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo_actual}' AND codrenglon='{puc_param}'"
     response_tipo2 = requests.get(url_tipo2)
 
@@ -145,7 +121,6 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
     else:
         tipo2_data = response_tipo2.json()
 
-    # Hacer la consulta para Financiera
     url_otras = f"{baseUrl_entidadesFinanciera}&$where=fecha_corte BETWEEN '{fecha1_str}' AND '{fecha2_str}' AND cuenta='{puc_param}' AND moneda ='0'"
     response_otras = requests.get(url_otras)
 
@@ -154,7 +129,6 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
     else:
         otras_data = response_otras.json()
 
-    # Procesar entidades de TipoEntidad = 2
     for entidad in queryset:
         if entidad.TipoEntidad == 2:
             nit = entidad.Nit
@@ -189,7 +163,6 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
                 if grupo_activo in grupo_activo_values:
                     resultado.append(entidad_data)
 
-    # Procesar entidades de otros tipos
     for entidad in queryset:
         if entidad.TipoEntidad != 2:
             nit = entidad.Nit
@@ -264,7 +237,7 @@ class EntidadApiView(APIView):
             resultado = obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values)         
             return Response(status=status.HTTP_200_OK, data=resultado)
         else:
-            entidades = queryset.values('id', 'Nit', 'Dv', 'RazonSocial', 'Sigla', 'TipoEntidad', 'Departamento', 'Gremio')
+            entidades = queryset.values('id', 'Nit', 'Dv', 'RazonSocial', 'Sigla', 'TipoEntidad', 'CodigoSuper', 'Descripcion', 'Departamento', 'Ciudad', 'Direccion', 'Telefono', 'Email', 'CIIU', 'RepresentanteLegal', 'Gremio')
 
             return Response(status=status.HTTP_200_OK, data=list(entidades))
 
@@ -273,7 +246,6 @@ class EntidadApiView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(status=status.HTTP_200_OK, data=serializer.data)
-
 
 class EntidadApiViewDetail(APIView):
     def get_object(self, pk):
@@ -302,3 +274,21 @@ class EntidadApiViewDetail(APIView):
         post.delete()
         response = {"deleted": True}
         return Response(status=status.HTTP_204_NO_CONTENT, data=response)
+
+class EntidadModelUpdateView(generics.UpdateAPIView):
+    queryset = EntidadModel.objects.all() 
+    serializer_class = EntidadSerializer 
+
+    def get_object(self):
+        obj = super().get_object()
+        return obj
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=400)
