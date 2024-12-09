@@ -20,6 +20,8 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from balSup.models import BalSupModel
 from balSup.serializers import BalSupSerializer
 
+from pucSup.models import PucSupModel
+
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -857,7 +859,6 @@ class BalSupApiViewIndicador(APIView):
 #         }
 """
 
-
 thread_IndicadorC = threading.local()
 thread_lock_IndicadorC = threading.Lock()
 
@@ -1190,51 +1191,85 @@ class BalSupApiViewBalanceCuenta(APIView):
 
         return Response(data=results, status=status.HTTP_200_OK)
 
+
 class BalSupApiViewBalanceIndependiente(APIView):
     def post(self, request):
         data = request.data
+
         results = []
         baseUrl_entidadesFinanciera = "https://www.datos.gov.co/resource/mxk5-ce6w.json?$limit=500000"
-
         entidad_financiera = data.get("entidad", {}).get("superfinanciera", [])
+
         periodo = data.get("año")
         mes = data.get("mes")
-        Razon_Social = entidad_financiera[0].get("RazonSocial")
 
-        fecha1 = datetime(periodo, mes, 1)
-        fecha2 = (fecha1 + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-        fecha1_str = fecha1.strftime("%Y-%m-%dT00:00:00")
-        fecha2_str = fecha2.strftime("%Y-%m-%dT23:59:59")
+        fecha1_str, fecha2_str = self.build_dates(periodo, mes)
+
+        Razon_Social = entidad_financiera[0].get("RazonSocial")
 
         def obtener_saldos_api():
             url_financiera = f"{baseUrl_entidadesFinanciera}&$where=fecha_corte BETWEEN '{fecha1_str}' AND '{fecha2_str}' AND nombre_entidad = '{Razon_Social}' AND moneda = '0'"
-
             response_financiera = requests.get(url_financiera)
-
             if response_financiera.status_code == 200:
                 all_data = response_financiera.json()
-                for result in all_data:
-                    razon_social = result.get("nombre_entidad")
-                    cuenta = result.get("cuenta")
-                    # nombre_cuenta = result.get("nombre_cuenta")
-                    valor = Decimal(result.get("valor", 0))
-                    # yield razon_social, cuenta, nombre_cuenta, valor
-                    yield razon_social, cuenta, valor
+                if all_data: 
+                    for result in all_data:
+                        razon_social = result.get("nombre_entidad")
+                        cuenta = result.get("cuenta")
+                        nombreCuenta = result.get("nombre_cuenta")
+                        valor = Decimal(result.get("valor", 0))
+                        yield {
+                            "razon_social": razon_social,
+                            "cuenta": cuenta,
+                            "nombreCuenta": nombreCuenta,
+                            "valor": valor
+                        }
             else:
                 print(f"Error al obtener datos de la API. Status code: {response_financiera.status_code}")
+            return []  
 
-        cuentas_detalles = []
+        def obtener_saldos_db():
+            for nit_info in entidad_financiera:
+                razon_social = nit_info.get("RazonSocial")
+                q_current_period = Q(entidad_RS=razon_social, periodo=periodo, mes=mes)
+                query_results_current = BalSupModel.objects.filter(q_current_period).values("entidad_RS", "puc_codigo", "saldo")
 
-        # for razon_social, cuenta, nombre_cuenta, valor in obtener_saldos_api():
-        for razon_social, cuenta, valor in obtener_saldos_api():
-            # cuentas_detalles.append({"cuenta": cuenta, "nombre_cuenta": nombre_cuenta, "valor": valor})
-            cuentas_detalles.append({"cuenta": cuenta, "valor": valor})
+                for result in query_results_current:
+                    nombreCuenta = PucSupModel.objects.filter(Codigo=result["puc_codigo"]).first()
+                    nombreCuenta = nombreCuenta.Descripcion if nombreCuenta else "Cuenta no encontrada"
+
+                    yield {
+                        "razon_social": razon_social,
+                        "cuenta": result["puc_codigo"],
+                        "nombreCuenta": nombreCuenta,
+                        "valor": Decimal(result["saldo"])
+                    }
+
+        saldos_current = defaultdict(lambda: {"saldo": Decimal(0), "nombreCuenta": ""})
+
+        api_data = list(obtener_saldos_api())
+        if api_data:
+            for saldo in api_data:
+                saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
+                saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
+        else:
+            for saldo in obtener_saldos_db():
+                saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
+                saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
+
+        cuentas_detalles = [
+            {
+                "cuenta": cuenta,
+                "nombreCuenta": data["nombreCuenta"],
+                "total_saldo": data["saldo"]
+            }
+            for cuenta, data in saldos_current.items()
+        ]
 
         cuentas_detalles = sorted(cuentas_detalles, key=lambda x: x["cuenta"])
 
         for entidad in entidad_financiera:
             razon_social = entidad.get("RazonSocial")
-
             results.append({
                 "año": periodo,
                 "mes": mes,
@@ -1243,5 +1278,9 @@ class BalSupApiViewBalanceIndependiente(APIView):
                 "RazonSocial": razon_social,
                 "cuentas_detalles": cuentas_detalles
             })
-
         return Response(data=results, status=status.HTTP_200_OK)
+
+    def build_dates(self, periodo, mes):
+        fecha1 = datetime(periodo, mes, 1)
+        fecha2 = (fecha1.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        return fecha1.strftime("%Y-%m-%dT00:00:00"), fecha2.strftime("%Y-%m-%dT23:59:59")

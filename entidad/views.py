@@ -173,7 +173,6 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
 
             if entity_data:
                 most_recent_data = max(entity_data, key=lambda x: datetime.strptime(x['fecha_corte'], '%Y-%m-%dT%H:%M:%S.%f'))
-                # print(most_recent_data['fecha_corte'])
                 mes_numero_financiera = get_month_from_date(most_recent_data['fecha_corte'])
                 saldo_decimal = float(most_recent_data['valor']) 
                 grupo_activo = determinar_grupo(saldo_decimal)
@@ -215,10 +214,6 @@ class EntidadApiView(APIView):
             departamento_values = departamento_param if departamento_param else []
             gremio_values = [int(value) for value in gremio_param] if gremio_param else []
             grupo_activo_values = [int(value) for value in grupo_activo_param] if grupo_activo_param else []
-
-            print(f'{tipo_entidad_values}, {departamento_values}, {gremio_values}, {grupo_activo_values}')
-            # print(f'{tipo_entidad_values}, {gremio_values}, {grupo_activo_values}')
-
         except ValueError:
             return Response(
                 status=status.HTTP_400_BAD_REQUEST,
@@ -226,7 +221,6 @@ class EntidadApiView(APIView):
             )
 
         queryset = EntidadModel.objects.all()
-
         if tipo_entidad_values:
             queryset = queryset.filter(TipoEntidad__in=tipo_entidad_values)
         if departamento_values:

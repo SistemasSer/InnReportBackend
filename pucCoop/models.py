@@ -1,5 +1,5 @@
 from django.db import models
- 
+
 class PucCoopModel(models.Model):
     Codigo = models.CharField(max_length=128)
     Descripcion = models.CharField(max_length=300)
