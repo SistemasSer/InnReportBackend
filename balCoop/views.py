@@ -1,29 +1,20 @@
-import logging
 import requests
 import concurrent.futures
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from django.db.models import Sum
+
 from django.db import transaction
 from django.db.models import Q
+
 from decimal import Decimal, InvalidOperation
-from datetime import datetime, timedelta
 from collections import defaultdict
 
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from rest_framework.decorators import authentication_classes, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.authentication import JWTAuthentication
-
 from balCoop.models import BalCoopModel
-from pucCoop.models import PucCoopModel
 from balCoop.serializers import BalCoopSerializer
-
-logger = logging.getLogger("django")
+from pucCoop.models import PucCoopModel
 
 def format_nit_dv(nit, dv):
     nit_str = str(nit).zfill(9)
@@ -33,7 +24,6 @@ def format_nit_dv(nit, dv):
     return formatted_nit_dv
 
 def get_month_name(month_number):
-
     month_names = [
         "ENERO", "FEBRERO", "MARZO", "ABRIL",
         "MAYO", "JUNIO", "JULIO", "AGOSTO",
@@ -201,7 +191,15 @@ class BalCoopApiViewA(APIView):
     def procesar_bloque(self, bloque, transformed_results, saldos_cache):
         periodo = int(bloque.get("periodo"))
         mes_number = bloque.get("mes")
-        mes = get_month_name(mes_number)
+        # mes = get_month_name(mes_number)
+
+        if periodo == 2024 and mes_number == 8:
+            mes = get_month_name(mes_number).capitalize()
+        elif periodo == 2024 and mes_number >= 9:
+            mes = get_month_name(mes_number).lower()
+        else:
+            mes = get_month_name(mes_number)
+
         puc_codigo = bloque.get("puc_codigo")
         baseUrl_entidadesSolidaria, campoCuenta = self.get_api_params(periodo)
         url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes}' AND {campoCuenta}='{puc_codigo}'"
@@ -277,7 +275,15 @@ class BalCoopApiViewIndicador(APIView):
         periodo = int(bloque.get("periodo"))
         mes_number = bloque.get("mes")
         mes_decimal = Decimal(mes_number)
-        mes = get_month_name(mes_number)
+        # mes = get_month_name(mes_number)
+
+        if periodo == 2024 and mes_number == 8:
+            mes = get_month_name(mes_number).capitalize()
+        elif periodo == 2024 and mes_number >= 9:
+            mes = get_month_name(mes_number).lower()
+        else:
+            mes = get_month_name(mes_number)
+
         puc_codes_current = ["100000", "110000", "120000", "140000", "210000", "230000", "240000", "300000", "310000", "311010", "320000", "330500", "340500", "350000", "415000", "615005", "615010", "615015", "615020", "615035"]
         puc_codes_prev = ["100000", "140000", "210000", "230000", "300000"]
         base_url, campo_cuenta = self.get_api_details(periodo)
@@ -445,7 +451,15 @@ class BalCoopApiViewIndicadorC(APIView):
         periodo = int(bloque.get("periodo"))
         mes_number = bloque.get("mes")
         mes_decimal = Decimal(mes_number)
-        mes = get_month_name(mes_number)
+        # mes = get_month_name(mes_number)
+
+        if periodo == 2024 and mes_number == 8:
+            mes = get_month_name(mes_number).capitalize()
+        elif periodo == 2024 and mes_number >= 9:
+            mes = get_month_name(mes_number).lower()
+        else:
+            mes = get_month_name(mes_number)
+
         base_url, campo_cuenta = self.get_api_details(periodo)
         puc_codes_current = ["141105", "141205", "144105", "144205", "141110", "141210", "144110", "144210", "141115", "141215", "144115","144215", "141120", "141220", "144120", "144220", "141125", "141225", "144125", "144225", "144805", "145505","145405", "144810", "145410", "145510", "144815", "145515", "145415", "144820", "145520", "145420", "144825","145425", "145525", "146105", "146205", "146110", "146210", "146115", "146215", "146120", "146220", "146125","146225", "140405", "140505", "140410", "140510", "140415", "140515", "140420", "140520", "140425", "140525","146905", "146930", "146910", "146935", "146915", "146940", "146920", "146945", "146925", "146950", "831000","144500", "145100", "145800", "146500", "140800", "147100", "147600", "147605", "147610", "147615", "147620","147625", "147900"]
         saldos_current = self.get_saldos(periodo, mes, campo_cuenta, puc_codes_current, base_url)
@@ -612,13 +626,14 @@ class BalCoopApiViewIndicadorC(APIView):
         empleados_porc_cobertura = ((empleados_deterioro / denominator_empleados_porc_cobertura) * 100 if denominator_empleados_porc_cobertura else 0)
 
         # Indicador de Total General
+
         total_a = (consumo_a + microcredito_a + comercial_a + vivienda_a + empleados_a + producto_a)
         total_b = (consumo_b + microcredito_b + comercial_b + vivienda_b + empleados_b + producto_b)
         total_c = (consumo_c + microcredito_c + comercial_c + vivienda_c + empleados_c + producto_c)
         total_d = (consumo_d + microcredito_d + comercial_d + vivienda_d + empleados_d + producto_d)
         total_e = (consumo_e + microcredito_e + comercial_e + vivienda_e + empleados_e + producto_e)
         total_castigos = get_saldo(formatted_nit_dv, razon_social, "831000", saldos_current)
-        total_total = (consumo_total + microcredito_total + comercial_total + vivienda_total + empleados_total + producto_total)
+        total_total = (total_a + total_b + total_c + total_d + total_e)
         total_deterioro = (consumo_deterioro + microcredito_deterioro + comercial_deterioro + vivienda_deterioro + empleados_deterioro + producto_deterioro)
         denominator_total_ind_mora = (total_a + total_b + total_c + total_d + total_e)
         total_ind_mora = (((total_b + total_c + total_d + total_e) / denominator_total_ind_mora) * 100 if denominator_total_ind_mora else 0)
@@ -729,12 +744,19 @@ class BalCoopApiViewBalanceCuenta(APIView):
         entidades_Solidaria = data.get("entidad", {}).get("solidaria", [])
         periodo = data.get("año")
         mes = data.get("mes")
-        mes_str = get_month_name(mes)
+        # mes_str = get_month_name(mes)
+
+        if periodo == 2024 and mes == 8:
+            mes_str = get_month_name(mes).capitalize()
+        elif periodo == 2024 and mes >= 9:
+            mes_str = get_month_name(mes).lower()
+        else:
+            mes_str = get_month_name(mes)
+
         pucCodigo = data.get("pucCodigo")
         pucName = data.get("pucName")
         results = []
 
-        # Determinar URL y campo según el año
         if periodo == 2020:
             baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=100000"
             campoCuenta = 'codcuenta'
@@ -745,20 +767,16 @@ class BalCoopApiViewBalanceCuenta(APIView):
             baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/tic6-rbue.json?$limit=100000"
             campoCuenta = 'codrenglon'
 
-        # Construir la URL para la consulta
         url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes_str}' AND {campoCuenta}='{pucCodigo}'"
 
-        # Procesar saldos desde la API con generador
         saldos_current = defaultdict(Decimal)
         for nit, total_saldo in self.get_saldos_solidaria(url_solidaria):
             saldos_current[nit] += total_saldo
 
-        # Procesar saldos locales con generador
         for razon_social, total_saldo in self.get_saldos_locales(entidades_Solidaria, periodo, mes, pucCodigo):
             if razon_social not in saldos_current:
                 saldos_current[razon_social] = total_saldo 
 
-        # Preparar el resultado final
         entidades = []
         for nit_info in entidades_Solidaria:
             razon_social = nit_info.get("RazonSocial")
@@ -772,8 +790,7 @@ class BalCoopApiViewBalanceCuenta(APIView):
                 "RazonSocial": razon_social,
                 "saldo": saldo
             })
-        
-        # Formar la respuesta final
+
         results.append({
             "año": periodo,
             "mes": mes,
@@ -790,16 +807,20 @@ class BalCoopApiViewBalanceIndependiente(APIView):
         entidades_Solidaria = data.get("entidad", {}).get("solidaria", [])
         periodo = data.get("año")
         mes = data.get("mes")
-        mes_str = get_month_name(mes)
+        # mes_str = get_month_name(mes)
+
+        if periodo == 2024 and mes == 8:
+            mes_str = get_month_name(mes).capitalize()
+        elif periodo == 2024 and mes >= 9:
+            mes_str = get_month_name(mes).lower()
+        else:
+            mes_str = get_month_name(mes)
 
         nit = entidades_Solidaria[0].get("nit")
         dv = entidades_Solidaria[0].get("dv")
-
         formatted_nit_dv = format_nit_dv(nit, dv)
-
         results = []
 
-        # Determinar URL y campo según el año
         if periodo == 2020:
             baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=100000"
             campoCuenta = 'codcuenta'
@@ -839,7 +860,6 @@ class BalCoopApiViewBalanceIndependiente(APIView):
                 query_results_current = BalCoopModel.objects.filter(q_current_period).values("entidad_RS", "puc_codigo", "saldo")
 
                 for result in query_results_current:
-                    # Obtener la descripción del nombre de la cuenta usando el código
                     nombreCuenta = PucCoopModel.objects.filter(Codigo=result["puc_codigo"]).first()
                     nombreCuenta = nombreCuenta.Descripcion if nombreCuenta else "Cuenta no encontrada"
                     
@@ -852,15 +872,12 @@ class BalCoopApiViewBalanceIndependiente(APIView):
 
         saldos_current = defaultdict(lambda: {"saldo": Decimal(0), "nombreCuenta": ""})
 
-
-        # Primero intentamos obtener los datos de la API
         api_data = list(obtener_saldos_api())
         if api_data:
             for saldo in api_data:
                 saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
                 saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
         else:
-            # Si la API no tiene datos, buscamos en la base de datos
             for saldo in obtener_saldos_db():
                 saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
                 saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
