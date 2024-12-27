@@ -87,18 +87,8 @@ class BalCoopApiView(APIView):
                 instances = existing_dict[key]
                 
                 if is_staff:
-                    # Si es staff, se permite la actualización
                     new_instances.append(BalCoopModel(**data))
-                    # for instance in instances:
-                    #     fields_to_update = []
-                    #     for attr, value in data.items():
-                    #         if getattr(instance, attr) != value:
-                    #             setattr(instance, attr, value)
-                    #             fields_to_update.append(attr)
-                    #     if fields_to_update:
-                    #         update_instances.append((instance, fields_to_update))
                 else:
-                    # No se permite la inserción si ya existe
                     error_message = f"Datos ya existentes para periodo {data['periodo']}, mes {get_month_name(data['mes'])}, Entidad: {data['entidad_RS']}."
                     errors.add(error_message)
             else:

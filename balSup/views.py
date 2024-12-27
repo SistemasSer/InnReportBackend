@@ -19,70 +19,77 @@ from pucSup.models import PucSupModel
 from datetime import datetime, timedelta
 from collections import defaultdict
 
+def get_month_name(month_number):
+    month_names = [
+        "ENERO", "FEBRERO", "MARZO", "ABRIL",
+        "MAYO", "JUNIO", "JULIO", "AGOSTO",
+        "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
+    ]
+    
+    if 1 <= month_number <= 12:
+        return month_names[month_number - 1]
+    else:
+        raise ValueError("Número de mes inválido. Debe estar entre 1 y 12.")
+
 class BalSupApiView(APIView):
     def get(self, request):
         serializer = BalSupSerializer(BalSupModel.objects.all(), many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
-
+    
     def post(self, request):
-        data_list = request.data
-
+        data_list = request.data.get('extractedData', [])
+        is_staff = request.data.get('isStaff', False)
+        
         serializer = BalSupSerializer(data=data_list, many=True)
         serializer.is_valid(raise_exception=True)
+
+        # Obtener instancias existentes
+        existing_instances = BalSupModel.objects.filter(
+            Q(periodo__in=[data['periodo'] for data in data_list]) &
+            Q(mes__in=[data['mes'] for data in data_list]) &
+            Q(entidad_RS__in=[data['entidad_RS'] for data in data_list])
+        )
+        
+        # Agrupar las instancias existentes
+        existing_dict = defaultdict(list)
+        for instance in existing_instances:
+            key = (instance.periodo, instance.mes, instance.entidad_RS)
+            existing_dict[key].append(instance)
+
         new_instances = []
         update_instances = []
+        errors = set()
 
-        existing_instances = BalSupModel.objects.filter(
-            Q(periodo__in=[data["periodo"] for data in data_list])
-            & Q(mes__in=[data["mes"] for data in data_list])
-            & Q(entidad_RS__in=[data["entidad_RS"] for data in data_list])
-            & Q(puc_codigo__in=[data["puc_codigo"] for data in data_list])
-        )
-        existing_dict = {
-            (
-                instance.periodo,
-                instance.mes,
-                instance.entidad_RS,
-                instance.puc_codigo,
-            ): instance
-            for instance in existing_instances
-        }
         for data in data_list:
-            key = (data["periodo"], data["mes"], data["entidad_RS"], data["puc_codigo"])
+            key = (data['periodo'], data['mes'], data['entidad_RS'])
             if key in existing_dict:
-                instance = existing_dict[key]
-
-                if all(getattr(instance, field) == data[field] for field in data):
-                    for attr, value in data.items():
-                        setattr(instance, attr, value)
-                    update_instances.append(instance)
+                instances = existing_dict[key]
+                
+                if is_staff:
+                    new_instances.append(BalSupModel(**data))
                 else:
-                    for attr, value in data.items():
-                        setattr(instance, attr, value)
-                    update_instances.append(instance)
+                    error_message = f"Datos ya existentes para periodo {data['periodo']}, mes {get_month_name(data['mes'])}, Entidad: {data['entidad_RS']}."
+                    errors.add(error_message)
             else:
+                # Si no existe, se agrega una nueva instancia
                 new_instances.append(BalSupModel(**data))
 
         with transaction.atomic():
             if new_instances:
                 BalSupModel.objects.bulk_create(new_instances)
             if update_instances:
-                BalSupModel.objects.bulk_update(
-                    update_instances,
-                    [
-                        "periodo",
-                        "mes",
-                        "entidad_RS",
-                        "puc_codigo",
-                        "saldo",
-                        "updated_at",
-                    ],
-                )
+                for instance, fields_to_update in update_instances:
+                    BalSupModel.objects.bulk_update([instance], fields_to_update)
 
-        return Response(
-            status=status.HTTP_200_OK,
-            data={"created": len(new_instances), "updated": len(update_instances)},
-        )
+        response_data = {
+            "created": len(new_instances),
+            "updated": len(update_instances),
+            "errors": list(errors)
+        }
+
+        if errors:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=response_data)
+        return Response(status=status.HTTP_200_OK, data=response_data)
 
 class BalSupApiViewDetail(APIView):
     def get_object(self, entidad_nit):
@@ -164,10 +171,10 @@ class BalSupApiViewA(APIView):
         mes = bloque.get("mes")
         puc_codigo = bloque.get("puc_codigo")
 
-        if puc_codigo == "350000": 
-            puc_codigo = "391500"
         if puc_codigo == "230000": 
             puc_codigo = "240000"
+        if puc_codigo == "350000": 
+            puc_codigo = "391500"
 
         fecha1 = datetime(periodo, mes, 1)
         fecha2 = (fecha1 + timedelta(days=31)).replace(day=1) - timedelta(days=1)

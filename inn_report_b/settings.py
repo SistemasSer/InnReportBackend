@@ -99,7 +99,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'CopiaInnReport',
-        'USER': 'jc',      
+        'USER': 'root',      
         'PASSWORD': '1234',
         'HOST': 'localhost',
         'PORT': '3306',
@@ -201,6 +201,14 @@ REST_FRAMEWORK = {
     )
 }
 
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'tu_email@dominio.com'
+# EMAIL_HOST_PASSWORD = 'tu_contraseña'
+# DEFAULT_FROM_EMAIL = 'no-reply@tudominio.com'
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -218,7 +226,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': 'debug.log',  # Ruta al archivo de log
+            'filename': 'debug.log',
             'formatter': 'verbose',
         },
     },
@@ -228,7 +236,7 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
-        'custom_logger': {  # Un logger personalizado para tu lógica
+        'custom_logger': {
             'handlers': ['file'],
             'level': 'DEBUG',
             'propagate': False,
