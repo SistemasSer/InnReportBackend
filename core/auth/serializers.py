@@ -1,10 +1,12 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
+from rest_framework.exceptions import ValidationError
+from rest_framework.views import APIView
+
 from django.contrib.auth import authenticate, update_session_auth_hash
 from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.views import APIView
 
 from core.user.serializers import UserSerializer
 from core.user.models import User
@@ -26,6 +28,7 @@ class LoginSerializer(TokenObtainPairSerializer):
 
         return data
 
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(max_length=128, min_length=8, write_only=True, required=True)
     email = serializers.EmailField(required=True, write_only=True, max_length=128)
@@ -40,8 +43,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
-
-    
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -74,3 +75,10 @@ class UserSerializerUpdate(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'is_staff']
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class PasswordResetSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)

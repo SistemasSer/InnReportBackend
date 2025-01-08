@@ -1,6 +1,8 @@
 # Ignorar archivo debug.log
+.gitignore
 debug.log
 env/
 .vscode/
 media/archivo/
 *.pyc
+.codegpt

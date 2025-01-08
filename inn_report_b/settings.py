@@ -58,7 +58,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware', #cambio de lugar
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -138,7 +138,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -172,7 +171,6 @@ CORS_ALLOW_ALL_ORIGINS = True
 #     "http://financieroserlogyc.eastus.cloudapp.azure.com:1514",
 # ]
 
-
 CORS_ALLOW_METHODS = [
     'GET',
     'POST',
@@ -201,13 +199,16 @@ REST_FRAMEWORK = {
     )
 }
 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'tu_email@dominio.com'
-# EMAIL_HOST_PASSWORD = 'tu_contraseña'
-# DEFAULT_FROM_EMAIL = 'no-reply@tudominio.com'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+DEFAULT_FROM_EMAIL = 'no-reply@tudominio.com'
+PROJECT_NAME = "Inn-Report"
+
+FRONTEND_URL = "http://localhost:3000"
 
 LOGGING = {
     'version': 1,
@@ -243,6 +244,23 @@ LOGGING = {
         },
     },
 }
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
 # SIMPLE_JWT = {
 #     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
 #     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
