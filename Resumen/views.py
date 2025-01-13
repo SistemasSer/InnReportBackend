@@ -1,3 +1,7 @@
+import os
+import mimetypes
+import urllib.parse
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -8,8 +12,6 @@ from .models import Documento
 from .serializers import DocumentoSerializer
 
 from django.http import FileResponse, Http404
-import os
-import mimetypes
 
 class DocumentoListCreateView(generics.ListCreateAPIView):
     serializer_class = DocumentoSerializer
@@ -31,14 +33,12 @@ class DocumentoUploadView(APIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class DocumentoUpdateView(generics.UpdateAPIView):
     queryset = Documento.objects.all()
     serializer_class = DocumentoSerializer
     parser_classes = (MultiPartParser, FormParser)
 
     def update(self, request, *args, **kwargs):
-        print("Request data:", request.data)  # Imprime los datos de la solicitud
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
 
@@ -47,14 +47,13 @@ class DocumentoUpdateView(generics.UpdateAPIView):
             self.perform_update(serializer)
             return Response(serializer.data)
         except Exception as e:
-            print(e)  # Imprime el error en la consola del servidor
+            print(e) 
             return Response(
                 {
                     "error": "Ocurrió un error durante la actualización. Por favor, inténtelo de nuevo más tarde."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
 
 class DocumentoDeleteView(generics.DestroyAPIView):
     queryset = Documento.objects.all()
@@ -71,7 +70,6 @@ class DocumentoDeleteView(generics.DestroyAPIView):
             return Response(
                 {"error": "Documento no encontrado."}, status=status.HTTP_404_NOT_FOUND
             )
-
 """
 class DocumentoDescargaView(APIView):
     def get(self, request, pk, format=None):
@@ -101,24 +99,38 @@ class DocumentoDescargaView(APIView):
             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 """
 
+
+# Extender los tipos MIME conocidos
+mimetypes.add_type('application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.docx')  # Word moderno
+mimetypes.add_type('application/msword', '.doc')  # Word antiguo
+mimetypes.add_type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx')  # Excel moderno
+mimetypes.add_type('application/vnd.ms-excel', '.xls')  # Excel antiguo
+mimetypes.add_type('application/vnd.openxmlformats-officedocument.presentationml.presentation', '.pptx')  # PowerPoint moderno
+mimetypes.add_type('application/vnd.ms-powerpoint', '.ppt')  # PowerPoint antiguo
+mimetypes.add_type('application/pdf', '.pdf')  # PDF
+
+
 class DocumentoDescargaView(APIView):
     def get(self, request, pk, format=None):
         try:
+            # Busca el archivo en la base de datos
             documento = Documento.objects.get(pk=pk)
             archivo_path = documento.archivo.path
 
             if not os.path.exists(archivo_path):
-                print(f"Archivo no encontrado: {archivo_path}")
                 return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
 
+            # Detecta el tipo MIME
             mime_type, _ = mimetypes.guess_type(archivo_path)
-            print(f"Archivo: {archivo_path}, Tipo MIME: {mime_type}")
+            if not mime_type:
+                mime_type = 'application/octet-stream' 
+
+            # Genera la respuesta
             response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
             response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
             return response
+
         except Documento.DoesNotExist:
-            print("Documento no encontrado")
             raise Http404("Documento no encontrado")
         except Exception as e:
-            print(f"Error inesperado: {str(e)}")
             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

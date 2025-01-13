@@ -6,3 +6,5 @@ env/
 media/archivo/
 *.pyc
 .codegpt
+.env
+.codegpt
