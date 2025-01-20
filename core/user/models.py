@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
@@ -24,7 +25,7 @@ class UserManager(BaseUserManager):
         return user
 
 class User(AbstractBaseUser, PermissionsMixin):
-    username = models.CharField(db_index=True, max_length=255, unique=True)
+    username = models.CharField(db_index=True, max_length=255)
     email = models.EmailField(db_index=True, unique=True, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -38,3 +39,32 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.email}"
+
+class Subscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    fecha_inicio_suscripcion = models.DateField()
+    fecha_final_suscripcion = models.DateField()
+    is_active = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs):
+        self.check_subscription_status()
+
+        super().save(*args, **kwargs)
+        self.update_user_status()
+
+    def check_subscription_status(self):
+        today = timezone.now().date()
+
+        if self.fecha_final_suscripcion < today:
+            self.is_active = False
+
+    def update_user_status(self):
+        if not self.user.is_staff:
+            if not self.user.subscriptions.filter(is_active=True).exists():
+                self.user.is_active = False
+            else:
+                self.user.is_active = True
+            self.user.save()
+
+    def __str__(self):
+        return f"Subscription for {self.user.email} from {self.fecha_inicio_suscripcion} to {self.fecha_final_suscripcion}"

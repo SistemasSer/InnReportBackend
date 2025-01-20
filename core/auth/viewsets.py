@@ -1,20 +1,17 @@
-import logging
-from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes
+from django.db import transaction
+from django.utils import timezone
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from django.conf import settings
 from itsdangerous import URLSafeTimedSerializer
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import AllowAny
-from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from core.auth.serializers import (
@@ -27,7 +24,7 @@ from core.auth.serializers import (
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.permissions import IsAuthenticated
-from core.user.models import User
+from core.user.models import User, Subscription
 from django.contrib.auth import update_session_auth_hash
 
 class LoginViewSet(ModelViewSet, TokenObtainPairView):
@@ -43,6 +40,9 @@ class LoginViewSet(ModelViewSet, TokenObtainPairView):
         if not user:
             return Response({"detail": "El email no está registrado."}, status=status.HTTP_400_BAD_REQUEST)
 
+        if User.objects.filter(email=email, is_active=False).first():
+            return Response({"detail": "La Cuenta se encuentra Inhabilitada"}, status=status.HTTP_403_FORBIDDEN)
+
         if not user.check_password(password):
             return Response({"detail": "La contraseña es incorrecta."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -56,33 +56,85 @@ class LoginViewSet(ModelViewSet, TokenObtainPairView):
         data["detail"] = "Inicio de sesión exitoso."
         return Response(data, status=status.HTTP_200_OK)
 
+
 class RegistrationViewSet(ModelViewSet):
     serializer_class = RegisterSerializer
     permission_classes = (AllowAny,)
     http_method_names = ["post"]
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data.get('email')
+        # email = serializer.validated_data.get('email')
+
+        email = request.data.get("email")
+
         if User.objects.filter(email=email).exists():
             return Response(
                 {"detail": "Este email ya está registrado."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        user = serializer.save()
-        refresh = RefreshToken.for_user(user)
-        res = {
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-        }
-        return Response(
-            {
-                "user": serializer.data,
-                "refresh": res["refresh"],
-                "token": res["access"],
-            },
-            status=status.HTTP_201_CREATED,
-        )
+
+        try:
+            with transaction.atomic():
+
+                fecha_inicio = request.data.get('fecha_inicio_suscripcion')
+                fecha_final = request.data.get('fecha_final_suscripcion')
+
+                if fecha_inicio and fecha_final:
+                    fecha_inicio = timezone.datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+                    fecha_final = timezone.datetime.strptime(fecha_final, "%Y-%m-%d").date()
+
+                    if fecha_final < timezone.now().date():
+                        return Response(
+                            {"detail": "La fecha final de la suscripción no puede ser una fecha pasada."},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    if fecha_final <= fecha_inicio:
+                        return Response(
+                            {"detail": "La fecha final de la suscripción debe ser posterior a la fecha de inicio."},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                else:
+                    return Response(
+                        {"detail": "Las fechas de inicio y fin de la suscripción son requeridas."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                user = serializer.save()
+
+                subscription = Subscription.objects.create(
+                    user=user,
+                    fecha_inicio_suscripcion=fecha_inicio,
+                    fecha_final_suscripcion=fecha_final,
+                    is_active=True
+                )
+
+                refresh = RefreshToken.for_user(user)
+                res = {
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                }
+
+                return Response(
+                    {
+                        "user": serializer.data,
+                        "subscription": {
+                            "fecha_inicio": subscription.fecha_inicio_suscripcion,
+                            "fecha_final": subscription.fecha_final_suscripcion,
+                        },
+                        "refresh": res["refresh"],
+                        "token": res["access"],
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+
+        except Exception as e:
+            return Response(
+                {"detail": f"Error al crear el usuario o la suscripción: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class RefreshViewSet(viewsets.ViewSet, TokenRefreshView):
     permission_classes = (AllowAny,)
@@ -189,6 +241,9 @@ class PasswordResetRequestViewSet(viewsets.ViewSet):
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
                 return Response({"detail": "Correo Electrónico no se encuentra registrado."}, status=status.HTTP_404_NOT_FOUND)
+            
+            if User.objects.filter(email=email, is_active=False).first():
+                return Response({"detail": "La Cuenta se encuentra Inhabilitada"}, status=status.HTTP_403_FORBIDDEN)
 
             token = default_token_generator.make_token(user)
             serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
@@ -241,3 +296,174 @@ class PasswordResetViewSet(viewsets.ViewSet):
             user.save()
             return Response({"detail": "Contraseña restablecida con éxito."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#subscription
+
+class CreateSubscriptionView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        user_id = request.data.get('user_id')
+        fecha_inicio = request.data.get('fecha_inicio_suscripcion')
+        fecha_final = request.data.get('fecha_final_suscripcion')
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if Subscription.objects.filter(user=user, is_active=True).exists():
+            return Response(
+                {"detail": "El usuario ya tiene una suscripción activa."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if fecha_inicio and fecha_final:
+            fecha_inicio = timezone.datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+            fecha_final = timezone.datetime.strptime(fecha_final, "%Y-%m-%d").date()
+
+            if fecha_final < timezone.now().date():
+                return Response(
+                    {"detail": "La fecha final de la suscripción no puede ser una fecha pasada."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if fecha_final <= fecha_inicio:
+                return Response(
+                    {"detail": "La fecha final de la suscripción debe ser posterior a la fecha de inicio."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            return Response(
+                {"detail": "Las fechas de inicio y fin de la suscripción son requeridas."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            with transaction.atomic():
+                subscription = Subscription.objects.create(
+                    user=user,
+                    fecha_inicio_suscripcion=fecha_inicio,
+                    fecha_final_suscripcion=fecha_final,
+                    is_active=True
+                )
+
+            return Response(
+                {
+                    "user": {
+                        "username": user.username
+                    },
+                    "subscription": {
+                        "fecha_inicio": subscription.fecha_inicio_suscripcion,
+                        "fecha_final": subscription.fecha_final_suscripcion,
+                    },
+                    "detail": f"la suscripcion de creo correctamente entre {fecha_inicio} y {fecha_final}"
+                },
+                status=status.HTTP_201_CREATED
+            )
+        except Exception as e:
+            return Response(
+                {"detail": f"Error al crear la suscripción: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+class ExtendSubscriptionView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        user_id = request.data.get('user_id')
+        nueva_fecha_final = request.data.get('nueva_fecha_final_suscripcion')
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        subscription = Subscription.objects.filter(user=user, is_active=True).first()
+        if not subscription:
+            return Response(
+                {"detail": "El usuario no tiene una suscripción activa."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if nueva_fecha_final:
+            nueva_fecha_final = timezone.datetime.strptime(nueva_fecha_final, "%Y-%m-%d").date()
+            if nueva_fecha_final < timezone.now().date():
+                return Response(
+                    {"detail": "La nueva fecha final no puede ser una fecha pasada."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # if nueva_fecha_final <= subscription.fecha_final_suscripcion:
+            #     return Response(
+            #         {"detail": "La nueva fecha final debe ser posterior a la fecha final de la suscripción actual."},
+            #         status=status.HTTP_400_BAD_REQUEST
+            #     )
+
+            subscription.fecha_final_suscripcion = nueva_fecha_final
+            subscription.save()
+
+            return Response(
+                {
+                    "user": {
+                        "username": user.username
+                    },
+                    "subscription": {
+                        "fecha_inicio": subscription.fecha_inicio_suscripcion,
+                        "fecha_final": subscription.fecha_final_suscripcion,
+                    },
+                    "detail": f"La fecha de expiración a pasado a {nueva_fecha_final}"
+                },
+                status=status.HTTP_200_OK
+            )
+
+        else:
+            return Response(
+                {"detail": "La nueva fecha final es requerida."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+class CancelSubscriptionView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        user_id = request.data.get('user_id')
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        subscription = Subscription.objects.filter(user=user, is_active=True).first()
+        if not subscription:
+            return Response(
+                {"detail": "El usuario no tiene una suscripción activa."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        subscription.is_active = False
+        subscription.save()
+
+        return Response(
+            {
+                "user": {
+                    "username": user.username
+                },
+                "subscription": {
+                    "fecha_inicio": subscription.fecha_inicio_suscripcion,
+                    "fecha_final": subscription.fecha_final_suscripcion,
+                    "is_active": subscription.is_active
+                },
+                "detail": f"La suscripcion de {user.username} ha sido anulada correctamente."
+            },
+            status=status.HTTP_200_OK
+        )

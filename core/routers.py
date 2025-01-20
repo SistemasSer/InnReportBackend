@@ -9,9 +9,11 @@ from core.auth.viewsets import (
     ChangePasswordViewSet,
     UserPasswordUpdateView,
     PasswordResetRequestViewSet,
-    PasswordResetViewSet
+    PasswordResetViewSet,
+    CreateSubscriptionView,
+    ExtendSubscriptionView,
+    CancelSubscriptionView
 )
-
 
 routes = SimpleRouter()
 
@@ -26,20 +28,15 @@ routes.register(r'change-password', ChangePasswordViewSet, basename='change-pass
 routes.register(r'user/update', UserPasswordUpdateView, basename='user-changedata'),
 # USER RESET PASSWORD
 routes.register(r'reset-request', PasswordResetRequestViewSet, basename='reset-request')
-# routes.register(r'reset-password/<int:user_id>/<str:token>/', PasswordResetViewSet, basename='password-reset')
+routes.register(r'reset-password/<int:user_id>/<str:token>/', PasswordResetViewSet, basename='password-reset')
 
-# urlpatterns = [
-#     # Ruta de restablecimiento de contraseña con parámetros dinámicos (user_id y token)
-#     path(r'reset-password/<int:user_id>/<str:token>/', PasswordResetViewSet.as_view({'post': 'create'}), name='password-reset'),
-# ]
 
 urlpatterns = [
-    # Ruta de restablecimiento de contraseña con parámetros dinámicos (encrypted_id y token)
-    path(
-        r'reset-password/<str:encrypted_id>/<str:token>/',
-        PasswordResetViewSet.as_view({'post': 'create'}),
-        name='password-reset'
-    ),
+    path(r'reset-password/<str:encrypted_id>/<str:token>/',PasswordResetViewSet.as_view({'post': 'create'}),name='password-reset'),
+    #subscription 
+    path(r'create_subscription', CreateSubscriptionView.as_view(), name='create-subscription'),
+    path(r'extend_subscription', ExtendSubscriptionView.as_view(), name='extend-subscription'),
+    path(r'cancel_subscription', CancelSubscriptionView.as_view(), name='cancel-subscription'),
 ]
 
 # USER
