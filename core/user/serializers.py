@@ -23,7 +23,6 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['is_active', 'created_at', 'updated_at']
 
     def get_subscriptions(self, obj):
-        # Filtrar las suscripciones activas
+
         active_subscriptions = obj.subscriptions.filter(is_active=True)
-        # Serializar solo las suscripciones activas
         return SubscriptionSerializer(active_subscriptions, many=True).data

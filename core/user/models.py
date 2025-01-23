@@ -37,6 +37,22 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
 
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = User.objects.get(pk=self.pk)
+            is_staff_changed = previous.is_staff != self.is_staff
+        else:
+            is_staff_changed = False
+
+        if is_staff_changed:
+            if self.is_staff:
+                self.is_active = True
+            else:
+                if not self.subscriptions.filter(is_active=True).exists():
+                    self.is_active = False
+
+        super(User, self).save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.email}"
 
