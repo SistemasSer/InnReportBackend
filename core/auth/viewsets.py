@@ -23,9 +23,13 @@ from core.auth.serializers import (
     PasswordResetSerializer
 )
 from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework.permissions import IsAuthenticated
 from core.user.models import User, Subscription
 from django.contrib.auth import update_session_auth_hash
+
+from django.contrib.sessions.models import Session
+from rest_framework.permissions import IsAuthenticated
+from django.utils.timezone import now
+from django.contrib.auth import login, logout
 
 class LoginViewSet(ModelViewSet, TokenObtainPairView):
     serializer_class = LoginSerializer
@@ -51,11 +55,26 @@ class LoginViewSet(ModelViewSet, TokenObtainPairView):
             serializer.is_valid(raise_exception=True)
         except TokenError:
             return Response({"detail": "Error al generar el token."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Cerrar sesiones anteriores del usuario
+        active_sessions = Session.objects.filter(expire_date__gte=now())
+        user_sessions = [session for session in active_sessions if session.get_decoded().get('_auth_user_id') == str(user.id)]
+        for session in user_sessions:
+            session.delete()
+
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError:
+            return Response({"detail": "Error al generar el token."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Iniciar sesión del usuario
+        login(request, user)
 
         data = serializer.validated_data
         data["detail"] = "Inicio de sesión exitoso."
+        data["session_key"] = request.session.session_key
         return Response(data, status=status.HTTP_200_OK)
-
 
 class RegistrationViewSet(ModelViewSet):
     serializer_class = RegisterSerializer
@@ -467,3 +486,35 @@ class CancelSubscriptionView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+#temporal
+
+class ActiveSessionsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        sessions = Session.objects.filter(expire_date__gte=now())
+        active_sessions = []
+
+        for session in sessions:
+            data = session.get_decoded()
+            user_id = data.get('_auth_user_id')
+            if user_id:
+                try:
+                    user = User.objects.get(id=user_id)
+                    active_sessions.append({
+                        'session_key': session.session_key,
+                        'user_id': user.id,
+                        'username': user.username,
+                        'last_activity': session.expire_date,
+                    })
+                except User.DoesNotExist:
+                    continue
+
+        return Response(active_sessions)
+
+class CheckSessionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        return Response({"session_key": request.session.session_key})

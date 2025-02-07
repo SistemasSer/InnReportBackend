@@ -29,9 +29,9 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework',
     'rest_framework_simplejwt',
+    'corsheaders',
     'person',
     'entidad',
-    'corsheaders',
     'core',
     'core.user',
     'pucCoop',
@@ -95,10 +95,6 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ORIGIN_ALLOW_ALL = True
-
-CORS_ALLOW_CREDENTIALS = True
-
 CORS_ALLOW_METHODS = [
     'GET',
     'POST',
@@ -113,6 +109,29 @@ CORS_ALLOW_HEADERS = [
     'authorization',
     'x-csrftoken',
 ]
+
+# CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_ALLOW_ALL = False
+
+CORS_ORIGIN_WHITELIST = [
+    "https://www.innreport.com.co",
+    "https://innreport.com.co",
+    "http://localhost:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+#cookie
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+
+# SECURE_SSL_REDIRECT = True
+
+# SESSION_COOKIE_SAMESITE = 'None'
+# CSRF_COOKIE_SAMESITE = 'None'
+
+# SESSION_COOKIE_DOMAIN = ".innreport.com.co" 
+# CSRF_COOKIE_DOMAIN = ".innreport.com.co"
 
 AUTH_USER_MODEL = 'core_user.User'
 
@@ -183,3 +202,10 @@ TEMPLATES = [
         },
     },
 ]
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'ExchangeRates',
+    }
+}

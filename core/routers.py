@@ -12,7 +12,9 @@ from core.auth.viewsets import (
     PasswordResetViewSet,
     CreateSubscriptionView,
     ExtendSubscriptionView,
-    CancelSubscriptionView
+    CancelSubscriptionView,
+    ActiveSessionsView,
+    CheckSessionView,
 )
 
 routes = SimpleRouter()
@@ -37,6 +39,9 @@ urlpatterns = [
     path(r'create_subscription', CreateSubscriptionView.as_view(), name='create-subscription'),
     path(r'extend_subscription', ExtendSubscriptionView.as_view(), name='extend-subscription'),
     path(r'cancel_subscription', CancelSubscriptionView.as_view(), name='cancel-subscription'),
+
+    path(r'active-sessions/', ActiveSessionsView.as_view(), name='active-sessions'),
+    path(r'check-session/', CheckSessionView.as_view(), name='check-session'),
 ]
 
 # USER

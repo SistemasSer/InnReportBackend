@@ -2,6 +2,7 @@ import os
 import mimetypes
 import urllib.parse
 
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,7 +12,12 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Documento
 from .serializers import DocumentoSerializer
 
+from django.http import HttpResponse
 from django.http import FileResponse, Http404
+
+import logging
+
+logger = logging.getLogger('custom_logger')
 
 class DocumentoListCreateView(generics.ListCreateAPIView):
     serializer_class = DocumentoSerializer
@@ -70,35 +76,6 @@ class DocumentoDeleteView(generics.DestroyAPIView):
             return Response(
                 {"error": "Documento no encontrado."}, status=status.HTTP_404_NOT_FOUND
             )
-"""
-class DocumentoDescargaView(APIView):
-    def get(self, request, pk, format=None):
-        try:
-            documento = Documento.objects.get(pk=pk)
-            archivo_path = documento.archivo.path
-
-            if not os.path.exists(archivo_path):
-                return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
-
-            mime_type, _ = mimetypes.guess_type(archivo_path)
-            if mime_type is None:
-                mime_type = 'application/octet-stream'
-            
-            # print("-----"*30)
-            # print(f"Archivo: {archivo_path}, Tipo MIME: {mime_type}")
-
-            response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
-            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
-            
-            return response
-
-        except Documento.DoesNotExist:
-            raise Http404("Documento no encontrado")
-        except Exception as e:
-            # print(f"Error inesperado: {str(e)}")
-            return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-"""
-
 
 # Extender los tipos MIME conocidos
 mimetypes.add_type('application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.docx')  # Word moderno
@@ -110,24 +87,48 @@ mimetypes.add_type('application/vnd.ms-powerpoint', '.ppt')  # PowerPoint antigu
 mimetypes.add_type('application/pdf', '.pdf')  # PDF
 
 
+# class DocumentoDescargaView(APIView):
+#     def get(self, request, pk, format=None):
+#         try:
+#             # Busca el archivo en la base de datos
+#             documento = Documento.objects.get(pk=pk)
+#             archivo_path = documento.archivo.path
+
+#             if not os.path.exists(archivo_path):
+#                 return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
+
+#             # Detecta el tipo MIME
+#             mime_type, _ = mimetypes.guess_type(archivo_path)
+#             if not mime_type:
+#                 mime_type = 'application/octet-stream' 
+
+#             # Genera la respuesta
+#             response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
+#             response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
+#             return response
+
+#         except Documento.DoesNotExist:
+#             raise Http404("Documento no encontrado")
+#         except Exception as e:
+#             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class DocumentoDescargaView(APIView):
     def get(self, request, pk, format=None):
         try:
-            # Busca el archivo en la base de datos
             documento = Documento.objects.get(pk=pk)
             archivo_path = documento.archivo.path
 
             if not os.path.exists(archivo_path):
                 return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
 
-            # Detecta el tipo MIME
             mime_type, _ = mimetypes.guess_type(archivo_path)
             if not mime_type:
-                mime_type = 'application/octet-stream' 
+                mime_type = 'application/octet-stream'
 
-            # Genera la respuesta
             response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
             response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
+            response['Access-Control-Allow-Origin'] = 'https://www.innreport.com.co'
+            response['Access-Control-Allow-Credentials'] = 'true'
             return response
 
         except Documento.DoesNotExist:

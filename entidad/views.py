@@ -119,6 +119,9 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
         else:
             puc_param_F = puc_param
 
+        fecha1_str = f"{periodo}-01-01T00:00:00.000"
+        fecha2_str = f"{periodo}-12-31T23:59:59.999"
+
         url_Financiera = f"{baseUrl_entidadesFinanciera}&$where=fecha_corte BETWEEN '{fecha1_str}' AND '{fecha2_str}' AND cuenta='{puc_param_F}' AND moneda ='0' AND tipo_entidad IN ('1', '4', '32')"
         response_Financiera = requests.get(url_Financiera)
         datos = response_Financiera.json() if response_Financiera.status_code == 200 and response_Financiera.json() else []

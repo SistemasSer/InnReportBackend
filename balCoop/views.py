@@ -826,7 +826,7 @@ class BalCoopApiViewBalanceIndependiente(APIView):
             response_solidaria = requests.get(url_solidaria)
             if response_solidaria.status_code == 200:
                 all_data = response_solidaria.json()
-                if all_data:  # Si hay datos, los retornamos
+                if all_data:
                     for result in all_data:
                         nit = result.get("nit")
                         cuenta = result.get(campoCuenta)
