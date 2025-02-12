@@ -181,14 +181,14 @@ class BalCoopApiViewA(APIView):
     def procesar_bloque(self, bloque, transformed_results, saldos_cache):
         periodo = int(bloque.get("periodo"))
         mes_number = bloque.get("mes")
-        # mes = get_month_name(mes_number)
+        mes = get_month_name(mes_number)
 
-        if periodo == 2024 and mes_number == 8:
-            mes = get_month_name(mes_number).capitalize()
-        elif periodo == 2024 and mes_number >= 9:
-            mes = get_month_name(mes_number).lower()
-        else:
-            mes = get_month_name(mes_number)
+        # if periodo == 2024 and mes_number == 8:
+        #     mes = get_month_name(mes_number).capitalize()
+        # elif periodo == 2024 and mes_number >= 9:
+        #     mes = get_month_name(mes_number).lower()
+        # else:
+        #     mes = get_month_name(mes_number)
 
         puc_codigo = bloque.get("puc_codigo")
         baseUrl_entidadesSolidaria, campoCuenta = self.get_api_params(periodo)
@@ -265,14 +265,14 @@ class BalCoopApiViewIndicador(APIView):
         periodo = int(bloque.get("periodo"))
         mes_number = bloque.get("mes")
         mes_decimal = Decimal(mes_number)
-        # mes = get_month_name(mes_number)
+        mes = get_month_name(mes_number)
 
-        if periodo == 2024 and mes_number == 8:
-            mes = get_month_name(mes_number).capitalize()
-        elif periodo == 2024 and mes_number >= 9:
-            mes = get_month_name(mes_number).lower()
-        else:
-            mes = get_month_name(mes_number)
+        # if periodo == 2024 and mes_number == 8:
+        #     mes = get_month_name(mes_number).capitalize()
+        # elif periodo == 2024 and mes_number >= 9:
+        #     mes = get_month_name(mes_number).lower()
+        # else:
+        #     mes = get_month_name(mes_number)
 
         puc_codes_current = ["100000", "110000", "120000", "140000", "210000", "230000", "240000", "300000", "310000", "311010", "320000", "330500", "340500", "350000", "415000", "615005", "615010", "615015", "615020", "615035"]
         puc_codes_prev = ["100000", "140000", "210000", "230000", "300000"]
@@ -441,14 +441,14 @@ class BalCoopApiViewIndicadorC(APIView):
         periodo = int(bloque.get("periodo"))
         mes_number = bloque.get("mes")
         mes_decimal = Decimal(mes_number)
-        # mes = get_month_name(mes_number)
+        mes = get_month_name(mes_number)
 
-        if periodo == 2024 and mes_number == 8:
-            mes = get_month_name(mes_number).capitalize()
-        elif periodo == 2024 and mes_number >= 9:
-            mes = get_month_name(mes_number).lower()
-        else:
-            mes = get_month_name(mes_number)
+        # if periodo == 2024 and mes_number == 8:
+        #     mes = get_month_name(mes_number).capitalize()
+        # elif periodo == 2024 and mes_number >= 9:
+        #     mes = get_month_name(mes_number).lower()
+        # else:
+        #     mes = get_month_name(mes_number)
 
         base_url, campo_cuenta = self.get_api_details(periodo)
         puc_codes_current = ["141105", "141205", "144105", "144205", "141110", "141210", "144110", "144210", "141115", "141215", "144115","144215", "141120", "141220", "144120", "144220", "141125", "141225", "144125", "144225", "144805", "145505","145405", "144810", "145410", "145510", "144815", "145515", "145415", "144820", "145520", "145420", "144825","145425", "145525", "146105", "146205", "146110", "146210", "146115", "146215", "146120", "146220", "146125","146225", "140405", "140505", "140410", "140510", "140415", "140515", "140420", "140520", "140425", "140525","146905", "146930", "146910", "146935", "146915", "146940", "146920", "146945", "146925", "146950", "831000","144500", "145100", "145800", "146500", "140800", "147100", "147600", "147605", "147610", "147615", "147620","147625", "147900"]
@@ -734,14 +734,14 @@ class BalCoopApiViewBalanceCuenta(APIView):
         entidades_Solidaria = data.get("entidad", {}).get("solidaria", [])
         periodo = data.get("año")
         mes = data.get("mes")
-        # mes_str = get_month_name(mes)
+        mes_str = get_month_name(mes)
 
-        if periodo == 2024 and mes == 8:
-            mes_str = get_month_name(mes).capitalize()
-        elif periodo == 2024 and mes >= 9:
-            mes_str = get_month_name(mes).lower()
-        else:
-            mes_str = get_month_name(mes)
+        # if periodo == 2024 and mes == 8:
+        #     mes_str = get_month_name(mes).capitalize()
+        # elif periodo == 2024 and mes >= 9:
+        #     mes_str = get_month_name(mes).lower()
+        # else:
+        #     mes_str = get_month_name(mes)
 
         pucCodigo = data.get("pucCodigo")
         pucName = data.get("pucName")
@@ -797,14 +797,14 @@ class BalCoopApiViewBalanceIndependiente(APIView):
         entidades_Solidaria = data.get("entidad", {}).get("solidaria", [])
         periodo = data.get("año")
         mes = data.get("mes")
-        # mes_str = get_month_name(mes)
+        mes_str = get_month_name(mes)
 
-        if periodo == 2024 and mes == 8:
-            mes_str = get_month_name(mes).capitalize()
-        elif periodo == 2024 and mes >= 9:
-            mes_str = get_month_name(mes).lower()
-        else:
-            mes_str = get_month_name(mes)
+        # if periodo == 2024 and mes == 8:
+        #     mes_str = get_month_name(mes).capitalize()
+        # elif periodo == 2024 and mes >= 9:
+        #     mes_str = get_month_name(mes).lower()
+        # else:
+        #     mes_str = get_month_name(mes)
 
         nit = entidades_Solidaria[0].get("nit")
         dv = entidades_Solidaria[0].get("dv")

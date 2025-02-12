@@ -61,20 +61,61 @@ class DocumentoUpdateView(generics.UpdateAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+# class DocumentoDeleteView(generics.DestroyAPIView):
+#     queryset = Documento.objects.all()
+#     serializer_class = DocumentoSerializer
+
+#     def delete(self, request, *args, **kwargs):
+#         try:
+#             response = super().delete(request, *args, **kwargs)
+#             return Response(
+#                 {"message": "Documento eliminado con éxito."},
+#                 status=status.HTTP_204_NO_CONTENT,
+#             )
+#         except Documento.DoesNotExist:
+#             return Response(
+#                 {"error": "Documento no encontrado."}, status=status.HTTP_404_NOT_FOUND
+#             )
+
 class DocumentoDeleteView(generics.DestroyAPIView):
     queryset = Documento.objects.all()
     serializer_class = DocumentoSerializer
 
+    def get_object(self):
+        try:
+            # Obtener el objeto a eliminar
+            return super().get_object()
+        except Documento.DoesNotExist:
+            # Si el documento no existe, lanzar una excepción
+            raise Http404("Documento no encontrado.")
+
     def delete(self, request, *args, **kwargs):
         try:
-            response = super().delete(request, *args, **kwargs)
-            return Response(
+            # Intentar eliminar el documento
+            instance = self.get_object()
+            self.perform_destroy(instance)
+            
+            # Agregar los encabezados de no cache
+            response = Response(
                 {"message": "Documento eliminado con éxito."},
-                status=status.HTTP_204_NO_CONTENT,
+                status=status.HTTP_200_OK,  # Cambiado a 200 OK
             )
-        except Documento.DoesNotExist:
+            response['Cache-Control'] = 'no-store'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            
+            return response
+        except Http404 as e:
+            # Manejar el caso en que el documento no existe
             return Response(
-                {"error": "Documento no encontrado."}, status=status.HTTP_404_NOT_FOUND
+                {"error": str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            # Manejar cualquier otro error
+            return Response(
+                {"error": f"Error al eliminar el documento: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 # Extender los tipos MIME conocidos
@@ -112,6 +153,30 @@ mimetypes.add_type('application/pdf', '.pdf')  # PDF
 #         except Exception as e:
 #             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# class DocumentoDescargaView(APIView):
+#     def get(self, request, pk, format=None):
+#         try:
+#             documento = Documento.objects.get(pk=pk)
+#             archivo_path = documento.archivo.path
+
+#             if not os.path.exists(archivo_path):
+#                 return Response({'error': 'El archivo no se pudo encontrar.'}, status=status.HTTP_404_NOT_FOUND)
+
+#             mime_type, _ = mimetypes.guess_type(archivo_path)
+#             if not mime_type:
+#                 mime_type = 'application/octet-stream'
+
+#             response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
+#             response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
+#             response['Access-Control-Allow-Origin'] = 'https://www.innreport.com.co'
+#             response['Access-Control-Allow-Credentials'] = 'true'
+#             return response
+
+#         except Documento.DoesNotExist:
+#             raise Http404("Documento no encontrado")
+#         except Exception as e:
+#             return Response({'error': f'Error al servir el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class DocumentoDescargaView(APIView):
     def get(self, request, pk, format=None):
         try:
@@ -125,10 +190,14 @@ class DocumentoDescargaView(APIView):
             if not mime_type:
                 mime_type = 'application/octet-stream'
 
+            # Usar FileResponse sin agregar manualmente Content-Disposition
             response = FileResponse(open(archivo_path, 'rb'), content_type=mime_type)
             response['Content-Disposition'] = f'attachment; filename="{os.path.basename(archivo_path)}"'
+            
+            # Agregar cabeceras CORS manualmente
             response['Access-Control-Allow-Origin'] = 'https://www.innreport.com.co'
             response['Access-Control-Allow-Credentials'] = 'true'
+            
             return response
 
         except Documento.DoesNotExist:

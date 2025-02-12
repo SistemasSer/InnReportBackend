@@ -104,6 +104,7 @@ CORS_ALLOW_METHODS = [
     'OPTIONS',
 ]
 
+
 CORS_ALLOW_HEADERS = [
     'content-type',
     'authorization',
