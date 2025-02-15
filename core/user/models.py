@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from entidad.models import EntidadModel
+
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 class UserManager(BaseUserManager):
@@ -84,3 +86,15 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"Subscription for {self.user.email} from {self.fecha_inicio_suscripcion} to {self.fecha_final_suscripcion}"
+
+class UserEntidad(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='usuario_entidades')
+    entidad = models.ForeignKey(EntidadModel, on_delete=models.CASCADE, related_name='usuario_entidades')
+    fecha_vinculacion = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "usuario_entidad"
+        unique_together = ('user', 'entidad')
+
+    def __str__(self):
+        return f"{self.user.email} - {self.entidad.RazonSocial}"

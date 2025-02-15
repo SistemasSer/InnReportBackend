@@ -15,6 +15,7 @@ from core.auth.viewsets import (
     CancelSubscriptionView,
     ActiveSessionsView,
     CheckSessionView,
+    EntidadesUser
 )
 
 routes = SimpleRouter()
@@ -42,6 +43,8 @@ urlpatterns = [
 
     path(r'active-sessions/', ActiveSessionsView.as_view(), name='active-sessions'),
     path(r'check-session/', CheckSessionView.as_view(), name='check-session'),
+
+    path(r'user-entity/<int:user_id>/', EntidadesUser.as_view(), name='user-entity'),
 ]
 
 # USER

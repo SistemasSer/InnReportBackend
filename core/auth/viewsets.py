@@ -20,11 +20,13 @@ from core.auth.serializers import (
     UserSerializer,
     UserSerializerUpdate,
     PasswordResetRequestSerializer,
-    PasswordResetSerializer
+    PasswordResetSerializer,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
-from core.user.models import User, Subscription
+from core.user.models import User, Subscription, UserEntidad
 from django.contrib.auth import update_session_auth_hash
+
+from entidad.models import EntidadModel
 
 from django.contrib.sessions.models import Session
 from rest_framework.permissions import IsAuthenticated
@@ -518,3 +520,70 @@ class CheckSessionView(APIView):
 
     def get(self, request, *args, **kwargs):
         return Response({"session_key": request.session.session_key})
+
+# userEntidad
+
+class EntidadesUser(APIView):
+
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        entidades_ids = request.data.get('entities', [])
+
+        # if not entidades_ids:
+        #     return Response({"detail": "Debes proporcionar al menos una entidad"}, status=status.HTTP_400_BAD_REQUEST)
+
+        relaciones_a_crear = []
+        for entidad_id in entidades_ids:
+            try:
+                entidad = EntidadModel.objects.get(id=entidad_id)
+            except EntidadModel.DoesNotExist:
+                return Response({"detail": f"Entidad no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+            if not UserEntidad.objects.filter(user=user, entidad=entidad).exists():
+                relaciones_a_crear.append(UserEntidad(user=user, entidad=entidad))
+
+        if relaciones_a_crear:
+            UserEntidad.objects.bulk_create(relaciones_a_crear)
+
+        return Response({
+            "user": user.id,
+            "entidades": entidades_ids,
+            "detail": "Relaciones creadas exitosamente."
+        }, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        entidades_ids = request.data.get('entities', [])
+
+        # if not entidades_ids:
+        #     return Response({"detail": "Debes proporcionar al menos una entidad"}, status=status.HTTP_400_BAD_REQUEST)
+
+        relaciones_a_eliminar = []
+        for entidad_id in entidades_ids:
+            try:
+                entidad = EntidadModel.objects.get(id=entidad_id)
+            except EntidadModel.DoesNotExist:
+                return Response({"detail": f"Entidad no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+            relacion = UserEntidad.objects.filter(user=user, entidad=entidad).first()
+            if relacion:
+                relaciones_a_eliminar.append(relacion)
+            else:
+                return Response({"detail": f"No existe relación entre el usuario y la entidad"}, status=status.HTTP_404_NOT_FOUND)
+
+        for relacion in relaciones_a_eliminar:
+            relacion.delete()
+
+        return Response({
+            "user": user.id,
+            "entidades": entidades_ids,
+            "detail": "Relaciones eliminadas exitosamente."
+        }, status=status.HTTP_200_OK)
