@@ -16,6 +16,7 @@ from balCoop.models import BalCoopModel
 from balCoop.serializers import BalCoopSerializer
 from pucCoop.models import PucCoopModel
 
+
 def format_nit_dv(nit, dv):
     nit_str = str(nit).zfill(9)
     dv_str = str(dv).zfill(1) 
@@ -267,12 +268,6 @@ class BalCoopApiViewIndicador(APIView):
         mes_decimal = Decimal(mes_number)
         mes = get_month_name(mes_number)
 
-        # if periodo == 2024 and mes_number == 8:
-        #     mes = get_month_name(mes_number).capitalize()
-        # elif periodo == 2024 and mes_number >= 9:
-        #     mes = get_month_name(mes_number).lower()
-        # else:
-        #     mes = get_month_name(mes_number)
 
         puc_codes_current = ["100000", "110000", "120000", "140000", "210000", "230000", "240000", "300000", "310000", "311010", "320000", "330500", "340500", "350000", "415000", "615005", "615010", "615015", "615020", "615035"]
         puc_codes_prev = ["100000", "140000", "210000", "230000", "300000"]
@@ -317,32 +312,6 @@ class BalCoopApiViewIndicador(APIView):
             print(f"Error al obtener los saldos de la API: {e}")
         return saldos   
 
-    def process_indicators(self, item, saldos_current, saldos_previous, results, mes_decimal, periodo, periodo_anterior_actual, mes_number, puc_codes_current, puc_codes_prev):
-        for nit_info in item.get("nit", {}).get("solidaria", []):
-            razon_social = nit_info.get("RazonSocial")
-            nit = nit_info.get("nit")
-            dv = nit_info.get("dv")
-            formatted_nit_dv = format_nit_dv(nit, dv)
-            if not any(saldos_current[formatted_nit_dv].values()):
-                self.load_saldos_from_db(razon_social, saldos_current, periodo, mes_number, puc_codes_current, is_current_period=True)
-            if not any(saldos_previous[formatted_nit_dv].values()):
-                self.load_saldos_from_db(razon_social, saldos_previous, periodo_anterior_actual, 12, puc_codes_prev, is_current_period=False)
-            try:
-                indicadores = self.calculate_indicators(formatted_nit_dv, razon_social, saldos_current, saldos_previous, mes_decimal)
-                result_entry = {
-                    "entidad_RS": razon_social,
-                    "sigla": nit_info.get("sigla"),
-                    "periodo": periodo,
-                    "mes": mes_number,
-                    **indicadores 
-                }
-                with thread_lock_Indicador:
-                    results.append(result_entry)
-            except Exception as e:
-                print(f"Error en cálculo de indicadores para {razon_social}: {e}")
-        with thread_lock_Indicador:
-            results.sort(key=lambda x: (x['periodo'], x['mes']))
-
     def load_saldos_from_db(self, razon_social, saldos_current, periodo, mes, puc_codes, is_current_period=True):
         if is_current_period:
             if not hasattr(thread_Indicador, 'currentPeriodo'):
@@ -377,6 +346,32 @@ class BalCoopApiViewIndicador(APIView):
                 if razon_social not in saldos_current:
                     saldos_current[razon_social] = {}
                 saldos_current[razon_social][puc_codigo] = saldo
+
+    def process_indicators(self, item, saldos_current, saldos_previous, results, mes_decimal, periodo, periodo_anterior_actual, mes_number, puc_codes_current, puc_codes_prev):
+        for nit_info in item.get("nit", {}).get("solidaria", []):
+            razon_social = nit_info.get("RazonSocial")
+            nit = nit_info.get("nit")
+            dv = nit_info.get("dv")
+            formatted_nit_dv = format_nit_dv(nit, dv)
+            if not any(saldos_current[formatted_nit_dv].values()):
+                self.load_saldos_from_db(razon_social, saldos_current, periodo, mes_number, puc_codes_current, is_current_period=True)
+            if not any(saldos_previous[formatted_nit_dv].values()):
+                self.load_saldos_from_db(razon_social, saldos_previous, periodo_anterior_actual, 12, puc_codes_prev, is_current_period=False)
+            try:
+                indicadores = self.calculate_indicators(formatted_nit_dv, razon_social, saldos_current, saldos_previous, mes_decimal)
+                result_entry = {
+                    "entidad_RS": razon_social,
+                    "sigla": nit_info.get("sigla"),
+                    "periodo": periodo,
+                    "mes": mes_number,
+                    **indicadores 
+                }
+                with thread_lock_Indicador:
+                    results.append(result_entry)
+            except Exception as e:
+                print(f"Error en cálculo de indicadores para {razon_social}: {e}")
+        with thread_lock_Indicador:
+            results.sort(key=lambda x: (x['periodo'], x['mes']))
 
     def calculate_indicators(self, formatted_nit_dv, razon_social, saldos_current, saldos_previous, mes_decimal):
         indicador_cartera = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "140000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
@@ -413,6 +408,7 @@ class BalCoopApiViewIndicador(APIView):
     def safe_division(self, numerator, denominator):
         return (numerator / denominator * 100) if denominator else 0
 
+
 thread_IndicadorC = threading.local()
 thread_lock_IndicadorC = threading.Lock()
 
@@ -443,15 +439,9 @@ class BalCoopApiViewIndicadorC(APIView):
         mes_decimal = Decimal(mes_number)
         mes = get_month_name(mes_number)
 
-        # if periodo == 2024 and mes_number == 8:
-        #     mes = get_month_name(mes_number).capitalize()
-        # elif periodo == 2024 and mes_number >= 9:
-        #     mes = get_month_name(mes_number).lower()
-        # else:
-        #     mes = get_month_name(mes_number)
-
         base_url, campo_cuenta = self.get_api_details(periodo)
-        puc_codes_current = ["141105", "141205", "144105", "144205", "141110", "141210", "144110", "144210", "141115", "141215", "144115","144215", "141120", "141220", "144120", "144220", "141125", "141225", "144125", "144225", "144805", "145505","145405", "144810", "145410", "145510", "144815", "145515", "145415", "144820", "145520", "145420", "144825","145425", "145525", "146105", "146205", "146110", "146210", "146115", "146215", "146120", "146220", "146125","146225", "140405", "140505", "140410", "140510", "140415", "140515", "140420", "140520", "140425", "140525","146905", "146930", "146910", "146935", "146915", "146940", "146920", "146945", "146925", "146950", "831000","144500", "145100", "145800", "146500", "140800", "147100", "147600", "147605", "147610", "147615", "147620","147625", "147900"]
+        # puc_codes_current = ["141105", "141205", "144105", "144205", "141110", "141210", "144110", "144210", "141115", "141215", "144115","144215", "141120", "141220", "144120", "144220", "141125", "141225", "144125", "144225", "144805", "145505","145405", "144810", "145410", "145510", "144815", "145515", "145415", "144820", "145520", "145420", "144825","145425", "145525", "146105", "146205", "146110", "146210", "146115", "146215", "146120", "146220", "146125","146225", "140405", "140505", "140410", "140510", "140415", "140515", "140420", "140520", "140425", "140525","146905", "146930", "146910", "146935", "146915", "146940", "146920", "146945", "146925", "146950", "831000","144500", "145100", "145800", "146500", "140800", "147100", "147600", "147605", "147610", "147615", "147620","147625", "147900"]
+        puc_codes_current = ["141105", "141205", "144105", "144205", "141110", "141210", "144110", "144210", "141115", "141215", "144115","144215", "141120", "141220", "144120", "144220", "141125", "141225", "144125", "144225", "144805", "145505","145405", "144810", "145410", "145510", "144815", "145515", "145415", "144820", "145520", "145420", "144825","145425", "145525", "146105", "146205", "146110", "146210", "146115", "146215", "146120", "146220", "146125","146225", "140405", "140505", "140410", "140510", "140415", "140515", "140420", "140520", "140425", "140525", "146905", "146930", "146910", "146935", "146915", "146940", "146920", "146945", "146925", "146950", "831000","144500", "145100", "145800", "146500", "140800", "147100", "147600", "147605", "147610", "147615", "147620","147625", "147900", "210000", "210500", "211000", "212500", "213000"]
         saldos_current = self.get_saldos(periodo, mes, campo_cuenta, puc_codes_current, base_url)
         self.process_indicators(bloque, saldos_current, results, mes_decimal, periodo, mes_number, puc_codes_current)
 
@@ -534,11 +524,14 @@ class BalCoopApiViewIndicadorC(APIView):
         consumo_total = (consumo_a + consumo_b + consumo_c + consumo_d + consumo_e)
         consumo_deterioro = get_saldo(formatted_nit_dv, razon_social, "144500", saldos_current)
         denominator_consumo_ind_mora = (consumo_a + consumo_b + consumo_c + consumo_d + consumo_e)
-        consumo_ind_mora = (((consumo_b + consumo_c + consumo_d + consumo_e) / denominator_consumo_ind_mora) * 100 if denominator_consumo_ind_mora else 0)
+        # consumo_ind_mora = (((consumo_b + consumo_c + consumo_d + consumo_e) / denominator_consumo_ind_mora) * 100 if denominator_consumo_ind_mora else 0)
+        consumo_ind_mora = self.percentage((consumo_b + consumo_c + consumo_d + consumo_e),denominator_consumo_ind_mora)
         denominator_consumo_cartera_improductiva = (denominator_consumo_ind_mora)
-        consumo_cartera_improductiva = (((consumo_c + consumo_d + consumo_e) / denominator_consumo_cartera_improductiva) * 100 if denominator_consumo_cartera_improductiva else 0)
+        # consumo_cartera_improductiva = (((consumo_c + consumo_d + consumo_e) / denominator_consumo_cartera_improductiva) * 100 if denominator_consumo_cartera_improductiva else 0)
+        consumo_cartera_improductiva = self.percentage((consumo_c + consumo_d + consumo_e),denominator_consumo_cartera_improductiva)
         denominator_consumo_porc_cobertura = (consumo_b + consumo_c + consumo_d + consumo_e)
-        consumo_porc_cobertura = ((consumo_deterioro / denominator_consumo_porc_cobertura) * 100 if denominator_consumo_porc_cobertura else 0)
+        # consumo_porc_cobertura = ((consumo_deterioro / denominator_consumo_porc_cobertura) * 100 if denominator_consumo_porc_cobertura else 0)
+        consumo_porc_cobertura = self.percentage(consumo_deterioro,denominator_consumo_porc_cobertura)
 
         # Indicadores de Microcredito
         microcredito_a = (get_saldo(formatted_nit_dv, razon_social, "144805", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "145505", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "145405", saldos_current))
@@ -549,11 +542,14 @@ class BalCoopApiViewIndicadorC(APIView):
         microcredito_total = (microcredito_a + microcredito_b + microcredito_c + microcredito_d + microcredito_e)
         microcredito_deterioro = (get_saldo(formatted_nit_dv, razon_social, "145100", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "145800", saldos_current))
         denominator_microcredito_ind_mora = (microcredito_a + microcredito_b + microcredito_c + microcredito_d + microcredito_e)
-        microcredito_ind_mora = (((microcredito_b + microcredito_c + microcredito_d + microcredito_e) / denominator_microcredito_ind_mora) * 100 if denominator_microcredito_ind_mora else 0)
+        # microcredito_ind_mora = (((microcredito_b + microcredito_c + microcredito_d + microcredito_e) / denominator_microcredito_ind_mora) * 100 if denominator_microcredito_ind_mora else 0)
+        microcredito_ind_mora = self.percentage((microcredito_b + microcredito_c + microcredito_d + microcredito_e),denominator_microcredito_ind_mora)
         denominator_microcredito_cartera_improductiva = (denominator_microcredito_ind_mora)
-        microcredito_cartera_improductiva = (((microcredito_c + microcredito_d + microcredito_e) / denominator_microcredito_cartera_improductiva) * 100 if denominator_microcredito_cartera_improductiva else 0)
+        # microcredito_cartera_improductiva = (((microcredito_c + microcredito_d + microcredito_e) / denominator_microcredito_cartera_improductiva) * 100 if denominator_microcredito_cartera_improductiva else 0)
+        microcredito_cartera_improductiva = self.percentage((microcredito_c + microcredito_d + microcredito_e),denominator_microcredito_cartera_improductiva)
         denominator_microcredito_porc_cobertura = (microcredito_b + microcredito_c + microcredito_d + microcredito_e)
-        microcredito_porc_cobertura = ((microcredito_deterioro / denominator_microcredito_porc_cobertura) * 100 if denominator_microcredito_porc_cobertura else 0)
+        # microcredito_porc_cobertura = ((microcredito_deterioro / denominator_microcredito_porc_cobertura) * 100 if denominator_microcredito_porc_cobertura else 0)
+        microcredito_porc_cobertura = self.percentage(microcredito_deterioro,denominator_microcredito_porc_cobertura)
 
         #Indicadores de  Productos
         producto_a = (get_saldo(formatted_nit_dv, razon_social, "147605", saldos_current))
@@ -564,11 +560,14 @@ class BalCoopApiViewIndicadorC(APIView):
         producto_total = (producto_a + producto_b + producto_c + producto_d + producto_e)
         producto_deterioro = (get_saldo(formatted_nit_dv, razon_social, "147900", saldos_current))
         denominator_producto_ind_mora = (producto_total)
-        producto_ind_mora = (((producto_b + producto_c + producto_d + producto_e) / denominator_producto_ind_mora) * 100 if denominator_producto_ind_mora else 0)
+        # producto_ind_mora = (((producto_b + producto_c + producto_d + producto_e) / denominator_producto_ind_mora) * 100 if denominator_producto_ind_mora else 0)
+        producto_ind_mora = self.percentage((producto_b + producto_c + producto_d + producto_e),denominator_producto_ind_mora)
         denominator_producto_cartera_improductiva = (denominator_producto_ind_mora)
-        producto_cartera_improductiva = (((producto_c + producto_d + producto_e) / denominator_producto_cartera_improductiva) * 100 if denominator_producto_cartera_improductiva else 0)
+        # producto_cartera_improductiva = (((producto_c + producto_d + producto_e) / denominator_producto_cartera_improductiva) * 100 if denominator_producto_cartera_improductiva else 0)
+        producto_cartera_improductiva = self.percentage((producto_c + producto_d + producto_e),denominator_producto_cartera_improductiva)
         denominator_producto_porc_cobertura = (producto_b + producto_c + producto_d + producto_e)
-        producto_porc_cobertura = ((producto_deterioro / denominator_producto_porc_cobertura) * 100 if denominator_producto_porc_cobertura else 0)
+        # producto_porc_cobertura = ((producto_deterioro / denominator_producto_porc_cobertura) * 100 if denominator_producto_porc_cobertura else 0)
+        producto_porc_cobertura = self.percentage(producto_deterioro,denominator_producto_porc_cobertura)
 
         # Indicadores de Comercial
         comercial_a = (get_saldo(formatted_nit_dv, razon_social, "146105", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "146205", saldos_current))
@@ -579,11 +578,14 @@ class BalCoopApiViewIndicadorC(APIView):
         comercial_total = (comercial_a + comercial_b + comercial_c + comercial_d + comercial_e)
         comercial_deterioro = get_saldo(formatted_nit_dv, razon_social, "146500", saldos_current)
         denominator_comercial_ind_mora = (comercial_a + comercial_b + comercial_c + comercial_d + comercial_e)
-        comercial_ind_mora = (((comercial_b + comercial_c + comercial_d + comercial_e) / denominator_comercial_ind_mora) * 100 if denominator_comercial_ind_mora else 0)
+        # comercial_ind_mora = (((comercial_b + comercial_c + comercial_d + comercial_e) / denominator_comercial_ind_mora) * 100 if denominator_comercial_ind_mora else 0)
+        comercial_ind_mora = self.percentage((comercial_b + comercial_c + comercial_d + comercial_e),denominator_comercial_ind_mora)
         denominator_comercial_cartera_improductiva = (denominator_comercial_ind_mora)
-        comercial_cartera_improductiva = (((comercial_c + comercial_d + comercial_e) / denominator_comercial_cartera_improductiva) * 100 if denominator_comercial_cartera_improductiva else 0)
+        # comercial_cartera_improductiva = (((comercial_c + comercial_d + comercial_e) / denominator_comercial_cartera_improductiva) * 100 if denominator_comercial_cartera_improductiva else 0)
+        comercial_cartera_improductiva = self.percentage((comercial_c + comercial_d + comercial_e),denominator_comercial_cartera_improductiva)
         denominator_comercial_porc_cobertura = (comercial_b + comercial_c + comercial_d + comercial_e)
-        comercial_porc_cobertura = ((comercial_deterioro / denominator_comercial_porc_cobertura) * 100 if denominator_comercial_porc_cobertura else 0)
+        # comercial_porc_cobertura = ((comercial_deterioro / denominator_comercial_porc_cobertura) * 100 if denominator_comercial_porc_cobertura else 0)
+        comercial_porc_cobertura = self.percentage(comercial_deterioro,denominator_comercial_porc_cobertura)
 
         # Indicadores de Vivienda
         vivienda_a = (get_saldo(formatted_nit_dv, razon_social, "140405", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "140505", saldos_current))
@@ -594,11 +596,14 @@ class BalCoopApiViewIndicadorC(APIView):
         vivienda_total = (vivienda_a + vivienda_b + vivienda_c + vivienda_d + vivienda_e)
         vivienda_deterioro = get_saldo(formatted_nit_dv, razon_social, "140800", saldos_current)
         denominator_vivienda_ind_mora = (vivienda_a + vivienda_b + vivienda_c + vivienda_d + vivienda_e)
-        vivienda_ind_mora = (((vivienda_b + vivienda_c + vivienda_d + vivienda_e) / denominator_vivienda_ind_mora) * 100 if denominator_vivienda_ind_mora else 0)
+        # vivienda_ind_mora = (((vivienda_b + vivienda_c + vivienda_d + vivienda_e) / denominator_vivienda_ind_mora) * 100 if denominator_vivienda_ind_mora else 0)
+        vivienda_ind_mora = self.percentage((vivienda_b + vivienda_c + vivienda_d + vivienda_e),denominator_vivienda_ind_mora)
         denominator_vivienda_cartera_improductiva = (denominator_vivienda_ind_mora)
-        vivienda_cartera_improductiva = (((vivienda_c + vivienda_d + vivienda_e) / denominator_vivienda_cartera_improductiva) * 100 if denominator_vivienda_cartera_improductiva else 0)
+        # vivienda_cartera_improductiva = (((vivienda_c + vivienda_d + vivienda_e) / denominator_vivienda_cartera_improductiva) * 100 if denominator_vivienda_cartera_improductiva else 0)
+        vivienda_cartera_improductiva = self.percentage((vivienda_c + vivienda_d + vivienda_e),denominator_vivienda_cartera_improductiva)
         denominator_vivienda_porc_cobertura = (vivienda_b + vivienda_c + vivienda_d + vivienda_e)
-        vivienda_porc_cobertura = ((vivienda_deterioro / denominator_vivienda_porc_cobertura) * 100 if denominator_vivienda_porc_cobertura else 0)
+        # vivienda_porc_cobertura = ((vivienda_deterioro / denominator_vivienda_porc_cobertura) * 100 if denominator_vivienda_porc_cobertura else 0)
+        vivienda_porc_cobertura = self.percentage(vivienda_deterioro,denominator_vivienda_porc_cobertura)
 
         # Ïndicadores de Empleado
         empleados_a = (get_saldo(formatted_nit_dv, razon_social, "146905", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "146930", saldos_current))
@@ -609,11 +614,14 @@ class BalCoopApiViewIndicadorC(APIView):
         empleados_total = (empleados_a + empleados_b + empleados_c + empleados_d + empleados_e)
         empleados_deterioro = get_saldo(formatted_nit_dv, razon_social, "147100", saldos_current)
         denominator_empleados_ind_mora = (empleados_a + empleados_b + empleados_c + empleados_d + empleados_e)
-        empleados_ind_mora = (((empleados_b + empleados_c + empleados_d + empleados_e) / denominator_empleados_ind_mora) * 100 if denominator_empleados_ind_mora else 0)
+        # empleados_ind_mora = (((empleados_b + empleados_c + empleados_d + empleados_e) / denominator_empleados_ind_mora) * 100 if denominator_empleados_ind_mora else 0)
+        empleados_ind_mora = self.percentage((empleados_b + empleados_c + empleados_d + empleados_e),denominator_empleados_ind_mora)
         denominator_empleados_cartera_improductiva = (denominator_empleados_ind_mora)
-        empleados_cartera_improductiva = (((empleados_c + empleados_d + empleados_e) / denominator_empleados_cartera_improductiva) * 100 if denominator_empleados_cartera_improductiva else 0)
+        # empleados_cartera_improductiva = (((empleados_c + empleados_d + empleados_e) / denominator_empleados_cartera_improductiva) * 100 if denominator_empleados_cartera_improductiva else 0)
+        empleados_cartera_improductiva = self.percentage((empleados_c + empleados_d + empleados_e),denominator_empleados_cartera_improductiva)
         denominator_empleados_porc_cobertura = (empleados_b + empleados_c + empleados_d + empleados_e)
-        empleados_porc_cobertura = ((empleados_deterioro / denominator_empleados_porc_cobertura) * 100 if denominator_empleados_porc_cobertura else 0)
+        # empleados_porc_cobertura = ((empleados_deterioro / denominator_empleados_porc_cobertura) * 100 if denominator_empleados_porc_cobertura else 0)
+        empleados_porc_cobertura = self.percentage(empleados_deterioro,denominator_empleados_porc_cobertura)
 
         # Indicador de Total General
 
@@ -626,9 +634,20 @@ class BalCoopApiViewIndicadorC(APIView):
         total_total = (total_a + total_b + total_c + total_d + total_e)
         total_deterioro = (consumo_deterioro + microcredito_deterioro + comercial_deterioro + vivienda_deterioro + empleados_deterioro + producto_deterioro)
         denominator_total_ind_mora = (total_a + total_b + total_c + total_d + total_e)
-        total_ind_mora = (((total_b + total_c + total_d + total_e) / denominator_total_ind_mora) * 100 if denominator_total_ind_mora else 0)
+        # total_ind_mora = (((total_b + total_c + total_d + total_e) / denominator_total_ind_mora) * 100 if denominator_total_ind_mora else 0)
+        total_ind_mora = self.percentage((total_b + total_c + total_d + total_e),denominator_total_ind_mora)
         denominator_total_porc_cobertura = (total_b + total_c + total_d + total_e)
-        total_porc_cobertura = ((total_deterioro / denominator_total_porc_cobertura) * 100 if denominator_total_porc_cobertura else 0)
+        # total_porc_cobertura = ((total_deterioro / denominator_total_porc_cobertura) * 100 if denominator_total_porc_cobertura else 0)
+        total_porc_cobertura = self.percentage(total_deterioro,denominator_total_porc_cobertura)
+
+        #Indicadores de Deposito
+
+        deposito = get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current)
+        depositioAhorro = self.percentage(get_saldo(formatted_nit_dv, razon_social, "210500", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        depositioAhorroTermino = self.percentage(get_saldo(formatted_nit_dv, razon_social, "211000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        depositioAhorroContractual = self.percentage(get_saldo(formatted_nit_dv, razon_social, "212500", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        depositioAhorroPermanente = self.percentage(get_saldo(formatted_nit_dv, razon_social, "213000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        depositoPorcentajeTotal= depositioAhorro + depositioAhorroTermino + depositioAhorroContractual + depositioAhorroPermanente
 
         return {
             "consumoA": consumo_a,
@@ -659,7 +678,7 @@ class BalCoopApiViewIndicadorC(APIView):
             "productoTotal": producto_total,
             "productoIndMora": producto_ind_mora,
             "productoCartImprod": producto_cartera_improductiva,
-            "productooDeterioro": producto_deterioro,
+            "productoDeterioro": producto_deterioro,
             "productoPorcCobertura": producto_porc_cobertura,
             "comercialA": comercial_a,  
             "comercialB": comercial_b,
@@ -701,10 +720,17 @@ class BalCoopApiViewIndicadorC(APIView):
             "totalIndMora": total_ind_mora,
             "totalDeterioro": total_deterioro,
             "totalPorcCobertura": total_porc_cobertura,
+            "deposito": deposito,
+            "depositoAhorro": depositioAhorro,
+            "depositoAhorroTermino": depositioAhorroTermino,
+            "depositoAhorroContractual": depositioAhorroContractual,
+            "depositoAhorroPermanente": depositioAhorroPermanente,
+            "depositoPorcentajeTotal": depositoPorcentajeTotal
         }
 
-    def safe_division(self, numerator, denominator):
-        return (numerator / denominator * 100) if denominator else 0
+    def percentage(self, partialValue, totalValue):
+        # return (partialValue / totalValue) * 100 if totalValue else 0
+        return (partialValue / totalValue) if totalValue else 0
 
 class BalCoopApiViewBalanceCuenta(APIView):
     def get_saldos_solidaria(self, url):
