@@ -342,7 +342,8 @@ class BalSupApiViewIndicador(APIView):
 
     def calculate_indicators(self, razon_social, saldos_current, saldos_previous, mes_decimal):
         def safe_division(numerator, denominator):
-            return (numerator / denominator * 100) if denominator else 0
+            # return (numerator / denominator * 100) if denominator else 0
+            return ( numerator / denominator ) if denominator else 0
 
         indicador_cartera = safe_division(saldos_current[razon_social]["140000"], saldos_current[razon_social]["100000"])
         indicador_deposito = safe_division(saldos_current[razon_social]["210000"], saldos_current[razon_social]["100000"])
@@ -405,7 +406,9 @@ class BalSupApiViewIndicadorC(APIView):
         periodo = int(bloque.get("periodo"))
         mes = bloque.get("mes")
         mes_decimal = Decimal(mes)
-        puc_codes_current = ["140800", "140805", "140810", "140815", "140820", "140825","149100", "141200", "141205", "141210", "141215", "141220","141225", "149300", "141000", "141005", "141010", "141015","141020", "141025", "149500", "148900", "140400", "140405","140410", "140415", "140420", "140425", "140430", "140435", "140440", "140445", "140450", "141400", "141405","141410", "141415", "141420", "141425", "148800", "141430","141435", "141440", "141445", "141450", "141460", "141465","141470", "141475", "141480", "812000",]
+        puc_codes_current = ["140800", "140805", "140810", "140815", "140820", "140825","149100", "141200", "141205", "141210", "141215", "141220","141225", "149300", "141000", "141005", "141010", "141015","141020", "141025", "149500", "148900", "140400", "140405","140410", "140415", "140420", "140425", "140430", "140435", "140440", "140445", "140450", "141400", "141405","141410", "141415", "141420", "141425", "148800", "141430", "141435", "141440", "141445", "141450", "141460", "141465", "141470", "141475", "141480", "812000",
+        "210000", "210500", "210600", "210700", "210800", "210900", "211000", "211100", "211200", "211300", "211400", "211500", "211600", "211700", "211800", "211900", "212000", "212200", "212300", "212400", "212500", "212600", "212700", "212800", "212900", "213000", "213200", "214600", "214700", "214800", "214900", "215000", "215100", "215200", "215300", "215400", "215500", "215600", "215700", "218000"
+        ]
         fecha1_str, fecha2_str = self.build_dates(periodo, mes)
         saldos_current = self.get_saldos(fecha1_str, fecha2_str, puc_codes_current)
         self.process_indicators(bloque, saldos_current, results, mes_decimal, periodo, mes,puc_codes_current)
@@ -479,7 +482,8 @@ class BalSupApiViewIndicadorC(APIView):
 
     def calculate_indicators(self, razon_social, saldos_current, mes_decimal):
         def safe_division(numerator, denominator):
-            return (numerator / denominator * 100) if denominator else 0
+            # return (numerator / denominator * 100) if denominator else 0
+            return ( numerator / denominator ) if denominator else 0
 
         #Consumo
         consumo_a = saldos_current[razon_social]["140805"]
@@ -560,9 +564,56 @@ class BalSupApiViewIndicadorC(APIView):
         total_total = (consumo_total + microcredito_total + comercial_total + vivienda_total + empleados_total)
         total_deterioro = (consumo_deterioro + microcredito_deterioro + comercial_deterioro + vivienda_deterioro + empleados_deterioro)
         denominator_total_ind_mora = (total_a + total_b + total_c + total_d + total_e)
-        total_ind_mora = (((total_b + total_c + total_d + total_e) / denominator_total_ind_mora) * 100 if denominator_total_ind_mora else 0)
+        # total_ind_mora = (((total_b + total_c + total_d + total_e) / denominator_total_ind_mora) * 100 if denominator_total_ind_mora else 0)
+        total_ind_mora = safe_division((total_b + total_c + total_d + total_e), denominator_total_ind_mora)
         denominator_total_porc_cobertura = (total_b + total_c + total_d + total_e)
-        total_porc_cobertura = ((total_deterioro / denominator_total_porc_cobertura) * 100 if denominator_total_porc_cobertura else 0)
+        # total_porc_cobertura = ((total_deterioro / denominator_total_porc_cobertura) * 100 if denominator_total_porc_cobertura else 0)
+        total_porc_cobertura = safe_division(total_deterioro, denominator_total_porc_cobertura)
+
+        #DEPOSITO
+        deposito = saldos_current[razon_social]["210000"]
+        # print(deposito)
+        dp_cuenta_corriente = safe_division(saldos_current[razon_social]["210500"], deposito)
+        dp_simple = safe_division(saldos_current[razon_social]["210600"], deposito)
+        dp_certificado_termino = safe_division(saldos_current[razon_social]["210700"], deposito)
+        dp_ahorro = safe_division(saldos_current[razon_social]["210800"], deposito)
+        dp_cuenta_ahorro_especial = safe_division(saldos_current[razon_social]["210900"], deposito)
+        dp_certificado_ahorro_varolReal = safe_division(saldos_current[razon_social]["211000"], deposito)
+        dp_documento_pagar = safe_division(saldos_current[razon_social]["211100"], deposito)
+        dp_cuenta_centralizada = safe_division(saldos_current[razon_social]["211200"], deposito)
+        dp_fondos_cuentas = safe_division(saldos_current[razon_social]["211300"], deposito)
+        dp_cesantias_fondoNacional = safe_division(saldos_current[razon_social]["211400"], deposito)
+        dp_bancos_corresponsales = safe_division(saldos_current[razon_social]["211500"], deposito)
+        dp_especiales = safe_division(saldos_current[razon_social]["211600"], deposito)
+        dp_exigibilidad_servico = safe_division(saldos_current[razon_social]["211700"], deposito)
+        dp_recaudo = safe_division(saldos_current[razon_social]["211800"], deposito)
+        dp_establecimientos_afiliados = safe_division(saldos_current[razon_social]["211900"], deposito)
+        dp_electronicos = safe_division(saldos_current[razon_social]["212000"], deposito)
+        dp_fondos_interbancarios = safe_division(saldos_current[razon_social]["212200"], deposito)
+        dp_fondos_interasociadas = safe_division(saldos_current[razon_social]["212300"], deposito)
+        dp_operaciones_reporto = safe_division(saldos_current[razon_social]["212400"], deposito)
+        dp_operaciones_simultaneas = safe_division(saldos_current[razon_social]["212500"], deposito)
+        dp_operaciones_transferencia = safe_division(saldos_current[razon_social]["212600"], deposito)
+        dp_billetes_circulacion = safe_division(saldos_current[razon_social]["212700"], deposito)
+        dp_pagos_internacionales = safe_division(saldos_current[razon_social]["212800"], deposito)
+        dp_compromisos = safe_division(saldos_current[razon_social]["212900"], deposito)
+        dp_titulos_inversion = safe_division(saldos_current[razon_social]["213000"], deposito)
+        dp_titulo_regulacion_banco = safe_division(saldos_current[razon_social]["213200"], deposito)
+        dp_titulo_regulacion = safe_division(saldos_current[razon_social]["214600"], deposito)
+        dp_operaciones_credito_internas_corto = safe_division(saldos_current[razon_social]["214700"], deposito)
+        dp_operaciones_credito_internas_largo = safe_division(saldos_current[razon_social]["214800"], deposito)
+        dp_operaciones_credito_externas_corto = safe_division(saldos_current[razon_social]["214900"], deposito)
+        dp_operaciones_credito_externas_largo = safe_division(saldos_current[razon_social]["215000"], deposito)
+        dp_operaciones_financiera_internas_corto = safe_division(saldos_current[razon_social]["215100"], deposito)
+        dp_operaciones_financiera_internas_largo = safe_division(saldos_current[razon_social]["215200"], deposito)
+        dp_operaciones_financiera_externas_corto = safe_division(saldos_current[razon_social]["215300"], deposito)
+        dp_operaciones_financiera_externas_largo = safe_division(saldos_current[razon_social]["215400"], deposito)
+        dp_operaciones_conjuntas = safe_division(saldos_current[razon_social]["215500"], deposito)
+        dp_cuentas_canceladas = safe_division(saldos_current[razon_social]["215600"], deposito)
+        dp_operaciones_contratacion = safe_division(saldos_current[razon_social]["215700"], deposito)
+        dp_pasivos_arrendamientos = safe_division(saldos_current[razon_social]["218000"], deposito)
+
+        dp_total = (dp_cuenta_corriente + dp_simple + dp_certificado_termino + dp_ahorro + dp_cuenta_ahorro_especial + dp_certificado_ahorro_varolReal + dp_documento_pagar + dp_cuenta_centralizada + dp_fondos_cuentas + dp_cesantias_fondoNacional + dp_bancos_corresponsales + dp_especiales + dp_exigibilidad_servico + dp_recaudo + dp_establecimientos_afiliados + dp_electronicos + dp_fondos_interbancarios + dp_fondos_interasociadas + dp_operaciones_reporto + dp_operaciones_simultaneas + dp_operaciones_transferencia + dp_billetes_circulacion + dp_pagos_internacionales + dp_compromisos + dp_titulos_inversion + dp_titulo_regulacion_banco + dp_titulo_regulacion + dp_operaciones_credito_internas_corto + dp_operaciones_credito_internas_largo + dp_operaciones_credito_externas_corto + dp_operaciones_credito_externas_largo + dp_operaciones_financiera_internas_corto + dp_operaciones_financiera_internas_largo + dp_operaciones_financiera_externas_corto + dp_operaciones_financiera_externas_largo + dp_operaciones_conjuntas + dp_cuentas_canceladas + dp_operaciones_contratacion + dp_pasivos_arrendamientos)
 
         return {
             "consumoA": consumo_a,
@@ -625,6 +676,48 @@ class BalSupApiViewIndicadorC(APIView):
             "totalIndMora": total_ind_mora,
             "totalDeterioro": total_deterioro,
             "totalPorcCobertura": total_porc_cobertura,
+
+            "deposito": deposito,
+            "depositoAhorro": dp_ahorro, #2108
+            "depositoAhorroTermino": dp_certificado_termino, #2107
+            "depositoCuentaCorriente": dp_cuenta_corriente, #2105
+            "depositoSimple": dp_simple, #2106
+            "depositoCuentaAhorroEspecial": dp_cuenta_ahorro_especial, #2109
+            "depositoCertificadoAhorroVarolReal": dp_certificado_ahorro_varolReal, #2110
+            "depositoDocumentoPagar": dp_documento_pagar, #2111
+            "depositoCuentaCentralizada": dp_cuenta_centralizada, #2112
+            "depositoFondosCuentas": dp_fondos_cuentas, #2113
+            "depositoCesantiasFondoNacional": dp_cesantias_fondoNacional, #2114
+            "depositoBancosCorresponsales": dp_bancos_corresponsales, #2115
+            "depositoEspeciales": dp_especiales, #2116
+            "depositoExigibilidadServico": dp_exigibilidad_servico, #2117
+            "depositoRecaudo": dp_recaudo, #2118
+            "depositoEstablecimientosAfiliados": dp_establecimientos_afiliados, #2119
+            "depositoElectronicos": dp_electronicos, #2120
+            "depositoFondosInterbancarios": dp_fondos_interbancarios, #2122
+            "depositoFondosInterasociadas": dp_fondos_interasociadas, #2123
+            "depositoOperacionesReporto": dp_operaciones_reporto, #2124
+            "depositoOperacionesSimultaneas": dp_operaciones_simultaneas, #2125
+            "depositoOperacionesTransferencia": dp_operaciones_transferencia, #2126
+            "depositoBilletesCirculacion": dp_billetes_circulacion, #2127
+            "depositoPagosInternacionales": dp_pagos_internacionales, #2128
+            "depositoCompromisos": dp_compromisos, #2129
+            "depositoTitulosInversion": dp_titulos_inversion, #2130
+            "depositoTituloRegulacionBanco": dp_titulo_regulacion_banco, #2132
+            "depositoTituloRegulacion": dp_titulo_regulacion, #2146
+            "depositoOperacionesCreditoInternasCorto": dp_operaciones_credito_internas_corto, #2147
+            "depositoOperacionesCreditoInternasLargo": dp_operaciones_credito_internas_largo, #2148
+            "depositoOperacionesCreditoExternasCorto": dp_operaciones_credito_externas_corto, #2149
+            "depositoOperacionesCreditoExternasLargo": dp_operaciones_credito_externas_largo, #2150
+            "depositoOperacionesFinancieraInternasCorto": dp_operaciones_financiera_internas_corto, #2151
+            "depositoOperacionesFinancieraInternasLargo": dp_operaciones_financiera_internas_largo, #2152
+            "depositoOperacionesFinancieraExternasCorto": dp_operaciones_financiera_externas_corto, #2153
+            "depositoOperacionesFinancieraExternasLargo": dp_operaciones_financiera_externas_largo, #2154
+            "depositoOperacionesConjuntas": dp_operaciones_conjuntas, #2155
+            "depositoCuentasCanceladas": dp_cuentas_canceladas, #2156
+            "depositoOperacionesContratacion": dp_operaciones_contratacion, #2157
+            "depositoPasivosArrendamientos": dp_pasivos_arrendamientos, #2180
+            "depositoPorcentajeTotal": dp_total
         }
 
 class BalSupApiViewBalanceCuenta(APIView):
