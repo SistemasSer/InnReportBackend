@@ -4,6 +4,7 @@ import threading
 
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 
 from decimal import Decimal, InvalidOperation
 from collections import defaultdict
@@ -17,7 +18,6 @@ from balCoop.serializers import BalCoopSerializer
 from pucCoop.models import PucCoopModel
 
 from time import sleep
-
 
 def format_nit_dv(nit, dv):
     nit_str = str(nit).zfill(9)
@@ -346,7 +346,7 @@ class BalCoopApiViewA(APIView):
         saldos = defaultdict(lambda: defaultdict(Decimal))
         formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
         url = f"{base_url}&$where=a_o='{periodo}' AND mes='{mes}' AND nit IN({formatted_nits_dvs_str}) AND {campo_cuenta}='{puc_codigo}'"
-
+        print(f"{url}")
         max_retries = 10
         retry_delay = 2
         
