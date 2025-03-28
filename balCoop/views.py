@@ -271,7 +271,15 @@ class BalCoopApiViewA(APIView):
                 future.result()
 
         # Convertir el diccionario de resultados a una lista
+        # final_results = list(transformed_results.values())
+        # return Response(final_results, status=status.HTTP_200_OK)
+
         final_results = list(transformed_results.values())
+
+        # Ordenar la lista de saldos de cada entidad por 'periodo' y 'mes'
+        for entidad in final_results:
+            entidad["saldos"] = sorted(entidad["saldos"], key=lambda x: (x["periodo"], x["mes"]))
+
         return Response(final_results, status=status.HTTP_200_OK)
 
     def dividir_en_bloques(self, datos):
@@ -347,7 +355,7 @@ class BalCoopApiViewA(APIView):
         formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
         url = f"{base_url}&$where=a_o='{periodo}' AND mes='{mes}' AND nit IN({formatted_nits_dvs_str}) AND {campo_cuenta}='{puc_codigo}'"
         print(f"{url}")
-        max_retries = 10
+        max_retries = 20
         retry_delay = 2
         
         for attempt in range(max_retries):

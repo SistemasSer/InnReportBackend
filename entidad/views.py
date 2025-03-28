@@ -16,18 +16,6 @@ from entidad.serializers import EntidadSerializer
 
 logger = logging.getLogger('django')
 
-class EntidadDefaulApiView(APIView):
-    def get(self, request):
-        serializer = EntidadSerializer(EntidadModel.objects.all(), many=True)
-        return Response(status=status.HTTP_200_OK, data=serializer.data)
-
-    def post(self, request):
-        # res = request.data.get('name')
-        serializer = EntidadSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(status=status.HTTP_200_OK, data=serializer.data)
-    
 def determinar_grupo(saldo):
     if saldo < 10000000000:
         return 1
@@ -102,8 +90,8 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
     baseUrl_entidadesFinanciera = "https://www.datos.gov.co/resource/mxk5-ce6w.json?$limit=500000"
 
     periodo_actual = datetime.now().year
-    fecha1_str = f"{periodo_actual}-01-01T00:00:00.000"
-    fecha2_str = f"{periodo_actual}-12-31T23:59:59.999"
+    # fecha1_str = f"{periodo_actual}-01-01T00:00:00.000"
+    # fecha2_str = f"{periodo_actual}-12-31T23:59:59.999"
     def obtener_datos_solidaria(periodo):
         # url_Solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND codrenglon='{puc_param}'"
         url_Solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND codrenglon='{puc_param}' AND codigo_entidad IN ('90', '93', '127', '197', '246', '271', '284', '330', '374', '424', '446', '561', '631', '715', '752', '757', '821', '824', '902', '912', '970', '978', '991', '997', '1093', '1100', '1119', '1128', '1190', '1198', '1266', '1302', '1306', '1319', '1339', '1344', '1355', '1356', '1360', '1365', '1370', '1377', '1386', '1388', '1390', '1411', '1414', '1421', '1437', '1442', '1450', '1457', '1459', '1477', '1510', '1512', '1615', '1630', '1632', '1644', '1648', '1649', '1661', '1663', '1691', '1698', '1703', '1751', '1755', '1756', '1760', '1805', '1811', '1813', '1824', '1827', '1851', '1852', '1859', '1889', '1894', '1961', '1991', '1997', '2006', '2012', '2021', '2024', '2028', '2058', '2077', '2078', '2109', '2130', '2196', '2199', '2223', '2231', '2246', '2336', '2337', '2392', '2398', '2426', '2434', '2483', '2506', '2520', '2525', '2540', '2560', '2641', '2655', '2660', '2675', '2688', '2773', '2783', '2814', '2829', '2871', '2878', '3018', '3033', '3034', '3048', '3049', '3070', '3072', '3123', '3246', '3249', '3278', '3282', '3316', '3341', '3360', '3386', '3391', '3399', '3400', '3402', '3438', '3446', '3488', '3620', '3640', '4004', '4011', '4054', '4403', '4458', '4617', '7099', '7571', '7961', '8024', '8202', '8480', '8487', '8825', '10300', '10555', '11085', '11128', '11327', '11488', '13022', '13024', '13813', '15236', '20009')"
@@ -128,20 +116,20 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
         return datos
 
     def obtener_datos(periodo):
-        Solidaria_data = obtener_datos_solidaria(periodo)
-        Financiera_data = obtener_datos_financiera(periodo)
-        return Solidaria_data, Financiera_data
+        def obtener_datos_con_retroceso(funcion_obtener, periodo):
+            while periodo >= 2000:
+                datos = funcion_obtener(periodo)
+                if datos:
+                    return datos, periodo
+                periodo -= 1
+            return None, None
 
-    def buscar_datos(periodo_inicial):
-        periodo = periodo_inicial
-        while periodo >= 2000:
-            Solidaria_data, Financiera_data = obtener_datos(periodo)
-            if Solidaria_data or Financiera_data:
-                return Solidaria_data, Financiera_data, periodo
-            periodo -= 1
-        return [], [], periodo
+        solidaria_data, periodo_solidaria = obtener_datos_con_retroceso(obtener_datos_solidaria, periodo)
+        financiera_data, periodo_financiera = obtener_datos_con_retroceso(obtener_datos_financiera, periodo)
 
-    Solidaria_data, Financiera_data, periodo_final = buscar_datos(periodo_actual)
+        return solidaria_data, financiera_data, periodo_solidaria, periodo_financiera
+
+    Solidaria_data, Financiera_data, periodo_solidaria, periodo_financiera = obtener_datos(periodo_actual)
 
     def generar_resultado_Solidaria():
         for entidad in queryset:
@@ -162,7 +150,7 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
                     saldo_decimal = clean_currency_value_Decimal(most_recent_data['valor_en_pesos'])
                     grupo_activo = determinar_grupo(saldo_decimal)
 
-                    fecha_tamaño = f"{(most_recent_data['mes']).upper()} - {periodo_final}"
+                    fecha_tamaño = f"{(most_recent_data['mes']).upper()} - {periodo_solidaria}"
 
                     if grupo_activo in grupo_activo_values:
                         yield {
@@ -175,7 +163,7 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
                             'Departamento': entidad.Departamento,
                             'Gremio': entidad.Gremio,
                             'Grupo_Activo': grupo_activo,
-                            'periodo': periodo_final,
+                            'periodo': periodo_solidaria,
                             'mes': mes_numero,
                             'fecha_tamaño': fecha_tamaño
                         }
@@ -197,7 +185,7 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
                     saldo_decimal = float(most_recent_data['valor'])
                     grupo_activo = determinar_grupo(saldo_decimal)
 
-                    fecha_tamaño = f"{get_month_name(mes_numero_financiera)} - {periodo_final}"
+                    fecha_tamaño = f"{get_month_name(mes_numero_financiera)} - {periodo_financiera}"
                     if grupo_activo in grupo_activo_values:
                         yield {
                             'id': entidad.id,
@@ -209,7 +197,7 @@ def obtener_saldo_y_periodo(queryset, puc_param, grupo_activo_values):
                             'Departamento': entidad.Departamento,
                             'Gremio': entidad.Gremio,
                             'Grupo_Activo': grupo_activo,
-                            'periodo': periodo_final,
+                            'periodo': periodo_financiera,
                             'mes': mes_numero_financiera,
                             'fecha_tamaño': fecha_tamaño
                         }
@@ -226,6 +214,18 @@ def convertir_mes_a_numero(mes):
     if numero_mes is None:
         raise ValueError(f"Mes inválido: '{mes}'. Asegúrate de que sea un nombre válido.")
     return numero_mes
+
+class EntidadDefaulApiView(APIView):
+    def get(self, request):
+        serializer = EntidadSerializer(EntidadModel.objects.all(), many=True)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
+
+    def post(self, request):
+        # res = request.data.get('name')
+        serializer = EntidadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
 
 class EntidadApiView(APIView):
 
