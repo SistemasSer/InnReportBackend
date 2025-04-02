@@ -144,105 +144,6 @@ class BalCoopApiViewDetail(APIView):
 
 thread_BalCoopA = threading.local()
 
-# class BalCoopApiViewA(APIView):
-#     def post(self, request):
-#         data = request.data
-#         transformed_results = {}
-#         saldos_cache = defaultdict(lambda: defaultdict(Decimal))
-#         formatted_nits_dvs = []
-#         for item in data:
-#             solidaria_data = item.get("nit", {}).get("solidaria", [])
-#             if not solidaria_data:
-#                 return Response([], status=status.HTTP_200_OK)
-#             for entidad in solidaria_data:
-#                 nit = entidad.get("nit")
-#                 dv = entidad.get("dv")
-#                 if nit is not None and dv is not None:
-#                     formatted_nit_dv = format_nit_dv(nit, dv)
-#                     formatted_nits_dvs.append(formatted_nit_dv)
-#         bloques = self.dividir_en_bloques(data)
-#         results = []
-#         with concurrent.futures.ThreadPoolExecutor() as executor:
-#             print(len(formatted_nits_dvs))
-#             futures = [executor.submit(self.procesar_bloque, bloque, transformed_results, formatted_nits_dvs, saldos_cache) for bloque in bloques]
-#             for future in concurrent.futures.as_completed(futures):
-#                 future.result()
-#         final_results = list(transformed_results.values())
-#         return Response(data=final_results, status=status.HTTP_200_OK)
-
-#     def dividir_en_bloques(self, datos):
-#         return [item for item in datos]
-
-#     def get_saldo_from_db(self, razon_social, periodo, puc_codigo, mes):
-#         if not hasattr(thread_BalCoopA, 'last_periodo'):
-#             thread_BalCoopA.last_periodo = None
-#             thread_BalCoopA.last_mes_number = None
-#             thread_BalCoopA.saved_query_results = None
-#         if thread_BalCoopA.last_periodo == periodo and thread_BalCoopA.last_mes_number == mes:
-#             all_query_results = thread_BalCoopA.saved_query_results
-#         else:
-#             q_current_period = Q(periodo=periodo, puc_codigo=puc_codigo, mes=mes)
-#             all_query_results = BalCoopModel.objects.filter(q_current_period).values("entidad_RS", "periodo", "mes", "saldo")
-#             thread_BalCoopA.saved_query_results = all_query_results
-#         thread_BalCoopA.last_periodo = periodo
-#         thread_BalCoopA.last_mes_number = mes
-#         filtered_results = [result for result in all_query_results if result['entidad_RS'] == razon_social]
-#         return filtered_results
-
-#     def procesar_bloque(self, bloque, transformed_results, formatted_nits_dvs,saldos_cache):
-#         periodo = int(bloque.get("periodo"))
-#         mes_number = bloque.get("mes")
-#         mes = get_month_name(mes_number)
-
-#         puc_codigo = bloque.get("puc_codigo")
-#         baseUrl_entidadesSolidaria, campoCuenta = self.get_api_params(periodo)
-#         formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
-#         url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes}' AND nit IN({formatted_nits_dvs_str}) AND {campoCuenta}='{puc_codigo}'"
-#         response_otras = requests.get(url_solidaria)
-#         all_data = response_otras.json() if response_otras.status_code == 200 else []
-#         for nit_info in bloque.get("nit", {}).get("solidaria", []):
-#             nit = nit_info.get("nit")
-#             razon_social = nit_info.get("RazonSocial")
-#             sigla = nit_info.get("sigla")
-#             dv = nit_info.get("dv")
-#             formatted_nit_dv = format_nit_dv(nit, dv)
-#             key = (razon_social, puc_codigo)
-#             if key not in transformed_results:
-#                 transformed_results[key] = {
-#                     "razon_social": razon_social,
-#                     "sigla": sigla,
-#                     "puc_codigo": puc_codigo,
-#                     "saldos": [],
-#                 }
-#             entity_data = [data for data in all_data if data['nit'] == formatted_nit_dv]
-#             saldo_en_bd = False
-#             if entity_data:
-#                 for result in entity_data:
-#                     saldo = clean_currency_value_Decimal(result.get('valor_en_pesos', '$ 0'))
-#                     saldos_cache[formatted_nit_dv][puc_codigo] += saldo
-#                     transformed_results[key]["saldos"].append({"periodo": periodo, "mes": mes_number, "saldo": saldo})
-#             else:
-#                 query_results = self.get_saldo_from_db(razon_social, periodo, puc_codigo, mes_number)
-#                 if query_results:
-#                     first_result = query_results[0]
-#                     saldo = float(first_result["saldo"])
-#                     saldos_cache[razon_social][puc_codigo] = saldo
-#                     transformed_results[key]["saldos"].append(
-#                         {"periodo": first_result["periodo"], "mes": first_result["mes"], "saldo": saldo}
-#                     )
-#                     saldo_en_bd = True
-#             if not entity_data and not saldo_en_bd:
-#                 transformed_results[key]["saldos"].append({"periodo": periodo, "mes": mes_number, "saldo": 0})
-#             transformed_results[key]["saldos"] = sorted(transformed_results[key]["saldos"], key=lambda x: (x["periodo"], x["mes"]))
-
-#     def get_api_params(self, periodo):
-#         if periodo == 2020:
-#             return ("https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=500000", 'codcuenta')
-#         elif periodo == 2021:
-#             return ("https://www.datos.gov.co/resource/irgu-au8v.json?$limit=500000", 'codrenglon')
-#         else:
-#             return ("https://www.datos.gov.co/resource/tic6-rbue.json?$limit=500000", 'codrenglon')
-
 class BalCoopApiViewA(APIView):
     def post(self, request):
         data = request.data
@@ -417,7 +318,7 @@ class BalCoopApiViewIndicador(APIView):
         mes_anterior = None
 
         formatted_nits_dvs = []
-        seen = set()  # Para verificar duplicados
+        seen = set()
 
         for item in data:
             solidaria_data = item.get("nit", {}).get("solidaria", [])
@@ -449,7 +350,8 @@ class BalCoopApiViewIndicador(APIView):
         # print(formatted_nits_dvs)
         print(formatted_nits_dvs.__len__())
 
-        puc_codes_current = ["100000", "110000", "120000", "140000", "210000", "230000", "240000", "300000", "310000", "311010", "320000", "330500", "340500", "350000", "415000", "615005", "615010", "615015", "615020", "615035"]
+        # puc_codes_current = ["100000", "110000", "120000", "140000", "210000", "230000", "240000", "300000", "310000", "311010", "320000", "330500", "340500", "350000", "415000", "615005", "615010", "615015", "615020", "615035"] 
+        puc_codes_current = ["100000", "110000", "120000", "140000", "210000", "230000", "240000", "300000", "310000", "311010", "320000", "330500", "340500", "350000", "415000", "615005", "615010", "615015", "615020", "615035", "510500", "511000", "511018", "511048", "511020", "511021", "511022", "511038", "511040", "511042", "512000", "512500", "513000", "513500", "514000", "511500"]
         puc_codes_prev = ["100000", "140000", "210000", "230000", "300000"]
         base_url, campo_cuenta = self.get_api_details(periodo)
         saldos_current = self.get_saldos(periodo, mes, campo_cuenta, puc_codes_current, base_url, formatted_nits_dvs)
@@ -473,35 +375,13 @@ class BalCoopApiViewIndicador(APIView):
         else:
             return ("https://www.datos.gov.co/resource/tic6-rbue.json?$limit=100000", 'codrenglon')
 
-    # def get_saldos(self, periodo, mes, campo_cuenta, puc_codes, base_url, formatted_nits_dvs, previous=False):
-    #     saldos = defaultdict(lambda: defaultdict(Decimal))
-    #     puc_codes_str = ','.join(f"'{code}'" for code in puc_codes)
-    #     formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
-    #     url = f"{base_url}&$where=a_o='{periodo}' AND mes='{mes}' AND nit IN({formatted_nits_dvs_str}) AND {campo_cuenta} IN ({puc_codes_str})"
-    #     try:
-    #         response = requests.get(url, timeout=10)
-    #         response.raise_for_status()
-    #         all_data = response.json()
-    #         print(f"Obtenidos {len(all_data)} registros de la API para el periodo {periodo} y mes {mes}")
-    #         if all_data:
-    #             for result in all_data:
-    #                 nit = result.get("nit")
-    #                 cuenta = result.get(campo_cuenta)
-    #                 valor_en_pesos = clean_currency_value_Decimal(result.get('valor_en_pesos', '0'))
-    #                 if cuenta in puc_codes:
-    #                     saldos[nit][cuenta] += valor_en_pesos
-    #     except requests.RequestException as e:
-    #         print(f"Error al obtener los saldos de la API: {e}")
-    #     return saldos
-
-
     def get_saldos(self, periodo, mes, campo_cuenta, puc_codes, base_url, formatted_nits_dvs, previous=False):
         saldos = defaultdict(lambda: defaultdict(Decimal))
         puc_codes_str = ','.join(f"'{code}'" for code in puc_codes)
         formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
         url = f"{base_url}&$where=a_o='{periodo}' AND mes='{mes}' AND nit IN({formatted_nits_dvs_str}) AND {campo_cuenta} IN ({puc_codes_str})"
         
-        max_retries = 10
+        max_retries = 20
         retry_delay = 2
         
         for attempt in range(max_retries):
@@ -591,28 +471,11 @@ class BalCoopApiViewIndicador(APIView):
             results.sort(key=lambda x: (x['periodo'], x['mes']))
 
     def calculate_indicators(self, formatted_nit_dv, razon_social, saldos_current, saldos_previous, mes_decimal):
-        # indicador_cartera = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "140000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
-        # indicador_deposito = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
-        # indicador_obligaciones = ((get_saldo(formatted_nit_dv, razon_social, "230000", saldos_current) / get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current)) * 100 if get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current) else 0)
-        # indicador_cap_social = ((get_saldo(formatted_nit_dv, razon_social, "310000", saldos_current) / get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current)) * 100 if get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current) else 0)
-        # indicador_cap_inst = (((get_saldo(formatted_nit_dv, razon_social, "311010", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "320000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "330500", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "340500", saldos_current)) / get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current)) * 100 if get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current) else 0)
-        # denominator_roe = (get_saldo(formatted_nit_dv, razon_social, "300000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "300000", saldos_current) / mes_decimal) * 12) / 2
-        # indicador_roe = (get_saldo(formatted_nit_dv, razon_social, "350000", saldos_current) / denominator_roe * 100) if denominator_roe else 0
-        # denominator_roa = (get_saldo(formatted_nit_dv, razon_social, "100000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current) / mes_decimal) * 12) / 2
-        # indicador_roa = ((get_saldo(formatted_nit_dv, razon_social, "350000", saldos_current) / denominator_roa) * 100 if denominator_roa else 0)
-        # denominator_ingreso_cartera = (get_saldo(formatted_nit_dv, razon_social, "140000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "140000", saldos_current) / mes_decimal) * 12) / 2
-        # indicador_ingreso_cartera = ((get_saldo(formatted_nit_dv, razon_social, "415000", saldos_current) / denominator_ingreso_cartera) * 100 if denominator_ingreso_cartera else 0)
-        # denominator_costos_deposito = (get_saldo(formatted_nit_dv, razon_social, "210000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current) / mes_decimal) * 12) / 2
-        # indicador_costos_deposito = (((get_saldo(formatted_nit_dv, razon_social, "615005", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "615010", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "615015", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "615020", saldos_current)) / denominator_costos_deposito) * 100 if denominator_costos_deposito else 0)
-        # denominator_credito_banco = (get_saldo(formatted_nit_dv, razon_social, "230000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "230000", saldos_current) / mes_decimal) * 12) / 2
-        # indicador_credito_banco = ((get_saldo(formatted_nit_dv, razon_social, "615035", saldos_current) / denominator_credito_banco) * 100 if denominator_credito_banco else 0)
-        # indicador_disponible = (((get_saldo(formatted_nit_dv, razon_social, "110000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "120000", saldos_current) - (get_saldo(formatted_nit_dv, razon_social, "240000", saldos_current) * 20 / 100)) / get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current)) * 100 if get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current) else 0)
 
         indicador_cartera = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "140000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
         indicador_deposito = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
         indicador_obligaciones = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "230000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
-        indicador_cap_social = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "310000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
-        # indicador_cap_inst = (((get_saldo(formatted_nit_dv, razon_social, "311010", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "320000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "330500", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "340500", saldos_current)) / get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current)) * 100 if get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current) else 0)
+        indicador_cap_social = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "310000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current)) 
         indicador_cap_inst = self.safe_division((get_saldo(formatted_nit_dv, razon_social, "311010", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "320000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "330500", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "340500", saldos_current)), get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
         denominator_roe = (get_saldo(formatted_nit_dv, razon_social, "300000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "300000", saldos_current) / mes_decimal) * 12) / 2
         indicador_roe = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "350000", saldos_current), denominator_roe)
@@ -625,6 +488,18 @@ class BalCoopApiViewIndicador(APIView):
         denominator_credito_banco = (get_saldo(formatted_nit_dv, razon_social, "230000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "230000", saldos_current) / mes_decimal) * 12) / 2
         indicador_credito_banco = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "615035", saldos_current), denominator_credito_banco)
         indicador_disponible = self.safe_division((get_saldo(formatted_nit_dv, razon_social, "110000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "120000", saldos_current) - (get_saldo(formatted_nit_dv, razon_social, "240000", saldos_current) * 20 / 100)), get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        # Gastos Operativos
+        indicador_personal = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "510500", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
+        mercader_cuenta =get_saldo(formatted_nit_dv, razon_social, "511018", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "511048", saldos_current)
+        indicador_mercader = self.safe_division( mercader_cuenta ,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
+        gobernabilidad_cuenta = get_saldo(formatted_nit_dv, razon_social, "511020", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "511021", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "511022", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "511038", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "511040", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "511042", saldos_current)
+        indicador_gobernabilidad = self.safe_division( gobernabilidad_cuenta ,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
+
+        indicador_administrativos = self.safe_division( get_saldo(formatted_nit_dv, razon_social, "511000", saldos_current) - mercader_cuenta - gobernabilidad_cuenta ,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
+
+        indicador_depreAmorti = self.safe_division( get_saldo(formatted_nit_dv, razon_social, "511000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "512000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "512500", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "513000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "513500", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "514000", saldos_current) ,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
+
+        deteriodo_gastosOpetativos = self.safe_division( get_saldo(formatted_nit_dv, razon_social, "511500", saldos_current) ,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
 
         return {
             "indicadorCartera": indicador_cartera,
@@ -638,12 +513,18 @@ class BalCoopApiViewIndicador(APIView):
             "indicadorCostDeposito": indicador_costos_deposito,
             "indicadorCredBanco": indicador_credito_banco,
             "indicadorDisponible": indicador_disponible,
+            # gastos opetativos
+            "indicadorPersonal": indicador_personal,
+            "indicadorAdministrativos": indicador_administrativos,
+            "indicadorMercader": indicador_mercader,
+            "indicadorGobernabilidad": indicador_gobernabilidad,
+            "indicadorDepreciacionesAmort": indicador_depreAmorti,
+            "DeterioroGastosOperativos": deteriodo_gastosOpetativos,
         }
 
     def safe_division(self, numerator, denominator):
         # return (numerator / denominator * 100) if denominator else 0
         return (numerator / denominator ) if denominator else 0
-
 
 thread_IndicadorC = threading.local()
 thread_lock_IndicadorC = threading.Lock()
@@ -705,51 +586,29 @@ class BalCoopApiViewIndicadorC(APIView):
         else:
             return ("https://www.datos.gov.co/resource/tic6-rbue.json?$limit=100000", 'codrenglon')
 
-    # def get_saldos(self, periodo, mes, campo_cuenta, puc_codes, base_url, formatted_nits_dvs):
-    #     saldos = defaultdict(lambda: defaultdict(Decimal))
-    #     puc_codes_str = ','.join(f"'{code}'" for code in puc_codes)
-    #     formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
-    #     url = f"{base_url}&$where=a_o='{periodo}' AND mes='{mes}' AND nit IN({formatted_nits_dvs_str}) AND {campo_cuenta} IN ({puc_codes_str})"
-    #     response = requests.get(url)
-    #     if response.status_code == 200:
-    #         all_data = response.json()
-    #         print(f"CARTERA Obtenidos {len(all_data)} registros de la API para el periodo {periodo} y mes {mes}")
-    #         for result in all_data:
-    #             nit = result.get("nit")
-    #             cuenta = result.get(campo_cuenta)
-    #             valor_en_pesos = clean_currency_value_Decimal(result.get('valor_en_pesos', '0'))
-    #             if cuenta in puc_codes:
-    #                 saldos[nit][cuenta] += valor_en_pesos
-    #     return saldos
-
     def get_saldos(self, periodo, mes, campo_cuenta, puc_codes, base_url, formatted_nits_dvs):
         saldos = defaultdict(lambda: defaultdict(Decimal))
         puc_codes_str = ','.join(f"'{code}'" for code in puc_codes)
-        
-        # Configuración clave
-        max_retries = 5  # Aumentar reintentos
-        base_timeout = 10  # Timeout base más generoso
-        backoff_base = 1  # Espera inicial de 5 segundos
-        # chunk_size = 58
+
+        max_retries = 20  
+        base_timeout = 15
+        backoff_base = 2
         chunk_size = 86
-        
-        # Dividir NITs en chunks para evitar timeout
+
         nit_chunks = [formatted_nits_dvs[i:i + chunk_size] 
         for i in range(0, len(formatted_nits_dvs), chunk_size)]
-        
+
         for chunk in nit_chunks:
             formatted_nits_str = ','.join(f"'{nit}'" for nit in chunk)
             url = f"{base_url}&$where=a_o='{periodo}' AND mes='{mes}' AND nit IN({formatted_nits_str}) AND {campo_cuenta} IN ({puc_codes_str})"
             
             for attempt in range(1, max_retries + 1):
                 try:
-                    # Timeout progresivo + conexión más tolerante
                     response = requests.get(
                         url, 
-                        timeout=(9.5, base_timeout + attempt * 10)  # (connect, read)
+                        # timeout=(9.5, base_timeout + attempt * 10) 
+                        timeout=(9.5, base_timeout ) 
                     )
-                    
-                    # Verificar contenido válido aunque el status sea 200
                     if not response.content:
                         raise ValueError("Respuesta vacía")
                         
@@ -767,7 +626,8 @@ class BalCoopApiViewIndicadorC(APIView):
                 except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                     print(f"CARTERA [{mes}] Timeout/Conectividad (intento {attempt}): {str(e)}")
                     if attempt < max_retries:
-                        delay = backoff_base * (2 ** attempt)
+                        # delay = backoff_base * (2 ** attempt)
+                        delay = backoff_base 
                         print(f"CARTERA [{mes}] Espera exponencial: {delay}s")
                         sleep(delay)
                     else:
@@ -955,11 +815,15 @@ class BalCoopApiViewIndicadorC(APIView):
         #Indicadores de Deposito
 
         deposito = get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current)
-        depositioAhorro = self.percentage(get_saldo(formatted_nit_dv, razon_social, "210500", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
-        depositioAhorroTermino = self.percentage(get_saldo(formatted_nit_dv, razon_social, "211000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
-        depositioAhorroContractual = self.percentage(get_saldo(formatted_nit_dv, razon_social, "212500", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
-        depositioAhorroPermanente = self.percentage(get_saldo(formatted_nit_dv, razon_social, "213000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
-        depositoPorcentajeTotal= depositioAhorro + depositioAhorroTermino + depositioAhorroContractual + depositioAhorroPermanente
+        depositoAhorro = get_saldo(formatted_nit_dv, razon_social, "210500", saldos_current)
+        particDepAhorro = self.percentage(get_saldo(formatted_nit_dv, razon_social, "210500", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        depositoAhorroTermino = get_saldo(formatted_nit_dv, razon_social, "211000", saldos_current)
+        particDepAhorroTermino = self.percentage(get_saldo(formatted_nit_dv, razon_social, "211000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        depositoAhorroContractual = get_saldo(formatted_nit_dv, razon_social, "212500", saldos_current)
+        particDepAhorroContractual = self.percentage(get_saldo(formatted_nit_dv, razon_social, "212500", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        depositoAhorroPermanente = get_saldo(formatted_nit_dv, razon_social, "213000", saldos_current)
+        particDepAhorroPermanente = self.percentage(get_saldo(formatted_nit_dv, razon_social, "213000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        depositoPorcentajeTotal= particDepAhorro + particDepAhorroTermino + particDepAhorroContractual + particDepAhorroPermanente
 
         return {
             "consumoA": consumo_a,
@@ -1034,10 +898,14 @@ class BalCoopApiViewIndicadorC(APIView):
             "totalPorcCobertura": total_porc_cobertura,
             
             "deposito": deposito,
-            "depositoAhorro": depositioAhorro,
-            "depositoAhorroTermino": depositioAhorroTermino,
-            "depositoAhorroContractual": depositioAhorroContractual,
-            "depositoAhorroPermanente": depositioAhorroPermanente,
+            "depositoAhorro": depositoAhorro,
+            "particionAhorro": particDepAhorro,
+            "depositoAhorroTermino": depositoAhorroTermino,
+            "particionAhorroTermino": particDepAhorroTermino,
+            "depositoAhorroContractual": depositoAhorroContractual,
+            "particionAhorroContractual": particDepAhorroContractual,
+            "depositoAhorroPermanente": depositoAhorroPermanente,
+            "particionAhorroPermanente": particDepAhorroPermanente,
             "depositoPorcentajeTotal": depositoPorcentajeTotal
         }
 
@@ -1045,17 +913,51 @@ class BalCoopApiViewIndicadorC(APIView):
         # return (partialValue / totalValue) * 100 if totalValue else 0
         return (partialValue / totalValue) if totalValue else 0
 
+def get_api_details( periodo ):
+    if periodo == 2020:
+        return ("https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=100000", 'codcuenta')
+    elif periodo == 2021:
+        return ("https://www.datos.gov.co/resource/irgu-au8v.json?$limit=100000", 'codrenglon')
+    else:
+        return ("https://www.datos.gov.co/resource/tic6-rbue.json?$limit=100000", 'codrenglon')
+
 class BalCoopApiViewBalanceCuenta(APIView):
+    # def get_saldos_solidaria(self, url):
+    #     response = requests.get(url)
+    #     if response.status_code == 200:
+    #         for result in response.json():
+    #             nit = result.get("nit")
+    #             valor_en_pesos = result.get('valor_en_pesos', '$ 0')
+    #             total_saldo = clean_currency_value_Decimal(valor_en_pesos)
+    #             yield nit, total_saldo
+    #     else:
+    #         print("No data fetched from API.")
+
     def get_saldos_solidaria(self, url):
-        response = requests.get(url)
-        if response.status_code == 200:
-            for result in response.json():
-                nit = result.get("nit")
-                valor_en_pesos = result.get('valor_en_pesos', '$ 0')
-                total_saldo = clean_currency_value_Decimal(valor_en_pesos)
-                yield nit, total_saldo
-        else:
-            print("No data fetched from API.")
+        max_retries = 20
+        retry_delay = 2
+
+        for attempt in range(max_retries):
+            try:
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                all_data = response.json()
+                print(f"BALANCE Obtenidos {len(all_data)} registros de la API  en el intento {attempt + 1}")
+                if all_data:
+                    for result in all_data: 
+                        nit = result.get("nit")
+                        valor_en_pesos = result.get('valor_en_pesos', '$ 0')
+                        total_saldo = clean_currency_value_Decimal(valor_en_pesos)
+                        yield nit, total_saldo
+                break
+
+            except requests.exceptions.Timeout:
+                print(f"BALANCE Timeout en intento {attempt + 1}/{max_retries}")
+                if attempt < max_retries - 1:
+                    sleep(retry_delay)
+            except requests.RequestException as e:
+                print(f"BALANCE Error no manejado en el intento {attempt + 1}: {e}")
+                break
     
     def get_saldos_locales(self, entidades_Solidaria, periodo, mes, pucCodigo):
         for nit_info in entidades_Solidaria:
@@ -1075,28 +977,26 @@ class BalCoopApiViewBalanceCuenta(APIView):
         mes = data.get("mes")
         mes_str = get_month_name(mes)
 
-        # if periodo == 2024 and mes == 8:
-        #     mes_str = get_month_name(mes).capitalize()
-        # elif periodo == 2024 and mes >= 9:
-        #     mes_str = get_month_name(mes).lower()
-        # else:
-        #     mes_str = get_month_name(mes)
+        formatted_nits_dvs = []
+        seen = set()
+
+        for item in entidades_Solidaria:
+            nit = item.get("nit")
+            dv = item.get("dv")
+            if nit is not None and dv is not None:
+                formatted_nit_dv = format_nit_dv(nit, dv)
+                if formatted_nit_dv not in seen:
+                    seen.add(formatted_nit_dv)
+                    formatted_nits_dvs.append(formatted_nit_dv)
 
         pucCodigo = data.get("pucCodigo")
         pucName = data.get("pucName")
         results = []
 
-        if periodo == 2020:
-            baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=100000"
-            campoCuenta = 'codcuenta'
-        elif periodo == 2021:
-            baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/irgu-au8v.json?$limit=100000"
-            campoCuenta = 'codrenglon'
-        else:
-            baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/tic6-rbue.json?$limit=100000"
-            campoCuenta = 'codrenglon'
+        baseUrl_entidadesSolidaria, campoCuenta = get_api_details(periodo)
 
-        url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes_str}' AND {campoCuenta}='{pucCodigo}'"
+        formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
+        url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes_str}' AND nit IN({formatted_nits_dvs_str}) AND {campoCuenta}='{pucCodigo}'"
 
         saldos_current = defaultdict(Decimal)
         for nit, total_saldo in self.get_saldos_solidaria(url_solidaria):
@@ -1130,41 +1030,208 @@ class BalCoopApiViewBalanceCuenta(APIView):
 
         return Response(data=results, status=status.HTTP_200_OK)
 
+# class BalCoopApiViewBalanceIndependiente(APIView):
+#     def post(self, request):
+#         data = request.data
+#         entidades_Solidaria = data.get("entidad", {}).get("solidaria", [])
+#         periodo = data.get("año")
+#         mes = data.get("mes")
+#         mes_str = get_month_name(mes)
+
+#         nit = entidades_Solidaria[0].get("nit")
+#         dv = entidades_Solidaria[0].get("dv")
+#         formatted_nit_dv = format_nit_dv(nit, dv)
+#         results = []
+
+#         # if periodo == 2020:
+#         #     baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=100000"
+#         #     campoCuenta = 'codcuenta'
+#         # elif periodo == 2021:
+#         #     baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/irgu-au8v.json?$limit=100000"
+#         #     campoCuenta = 'codrenglon'
+#         # else:
+#         #     baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/tic6-rbue.json?$limit=100000"
+#         #     campoCuenta = 'codrenglon'
+
+#         baseUrl_entidadesSolidaria, campoCuenta = get_api_details(periodo)
+
+#         url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes_str}' AND nit='{formatted_nit_dv}'"
+
+
+#         # def obtener_saldos_api():
+#         #     url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes_str}' AND nit='{formatted_nit_dv}'"
+#         #     response_solidaria = requests.get(url_solidaria)
+#         #     if response_solidaria.status_code == 200:
+#         #         all_data = response_solidaria.json()
+#         #         if all_data:
+#         #             for result in all_data:
+#         #                 nit = result.get("nit")
+#         #                 cuenta = result.get(campoCuenta)
+#         #                 nombreCuenta = result.get("nombre_cuenta")
+#         #                 valor_en_pesos = result.get('valor_en_pesos', '$ 0')
+#         #                 valor = clean_currency_value_Decimal(valor_en_pesos)
+#         #                 yield {
+#         #                     "nit": nit,
+#         #                     "cuenta": cuenta,
+#         #                     "nombreCuenta": nombreCuenta,
+#         #                     "valor": valor
+#         #                 }
+#         #     else:
+#         #         print(f"Error al obtener datos de la API. Status code: {response_solidaria.status_code}")
+#         #     return []
+
+#         def obtener_saldos_api(self, url):
+#             max_retries = 20
+#             retry_delay = 2
+
+#             for attempt in range(max_retries):
+#                 try:
+#                     response = requests.get(url, timeout=10)
+#                     response.raise_for_status()
+#                     all_data = response.json()
+#                     print(f"BALANCE IND Obtenidos {len(all_data)} registros de la API  en el intento {attempt + 1}")
+#                     if all_data:
+#                         for result in all_data:
+#                             nit = result.get("nit")
+#                             cuenta = result.get(campoCuenta)
+#                             nombreCuenta = result.get("nombre_cuenta")
+#                             valor_en_pesos = result.get('valor_en_pesos', '$ 0')
+#                             valor = clean_currency_value_Decimal(valor_en_pesos)
+#                             yield {
+#                                 "nit": nit,
+#                                 "cuenta": cuenta,
+#                                 "nombreCuenta": nombreCuenta,
+#                                 "valor": valor
+#                             }
+#                     break
+
+#                 except requests.exceptions.Timeout:
+#                     print(f"BALANCE IND Timeout en intento {attempt + 1}/{max_retries}")
+#                     if attempt < max_retries - 1:
+#                         sleep(retry_delay)
+#                 except requests.RequestException as e:
+#                     print(f"BALANCE IND Error no manejado en el intento {attempt + 1}: {e}")
+#                     break
+
+#         def obtener_saldos_db():
+#             for nit_info in entidades_Solidaria:
+#                 razon_social = nit_info.get("RazonSocial")
+#                 q_current_period = Q(entidad_RS=razon_social, periodo=periodo, mes=mes)
+#                 query_results_current = BalCoopModel.objects.filter(q_current_period).values("entidad_RS", "puc_codigo", "saldo")
+
+#                 for result in query_results_current:
+#                     nombreCuenta = PucCoopModel.objects.filter(Codigo=result["puc_codigo"]).first()
+#                     nombreCuenta = nombreCuenta.Descripcion if nombreCuenta else "Cuenta no encontrada"
+                    
+#                     yield {
+#                         "razon_social": razon_social,
+#                         "cuenta": result["puc_codigo"],
+#                         "nombreCuenta": nombreCuenta,
+#                         "valor": Decimal(result["saldo"])
+#                     }
+
+#         saldos_current = defaultdict(lambda: {"saldo": Decimal(0), "nombreCuenta": ""})
+
+#         api_data = list(obtener_saldos_api(url_solidaria))
+#         if api_data:
+#             for saldo in api_data:
+#                 saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
+#                 saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
+#         else:
+#             for saldo in obtener_saldos_db():
+#                 saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
+#                 saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
+
+#         cuentas_detalles = [
+#             {
+#                 "cuenta": cuenta,
+#                 "nombreCuenta": data["nombreCuenta"],
+#                 "total_saldo": data["saldo"]
+#             }
+#             for cuenta, data in saldos_current.items()
+#         ]
+
+#         cuentas_detalles = sorted(cuentas_detalles, key=lambda x: x["cuenta"])
+
+#         for entidad in entidades_Solidaria:
+#             razon_social = entidad.get("RazonSocial")
+#             results.append({
+#                 "año": periodo,
+#                 "mes": mes,
+#                 "nit": entidad.get("nit"),
+#                 "sigla": entidad.get("sigla"),
+#                 "RazonSocial": razon_social,
+#                 "cuentas_detalles": cuentas_detalles
+#             })
+
+#         return Response(data=results, status=status.HTTP_200_OK)
+
 class BalCoopApiViewBalanceIndependiente(APIView):
     def post(self, request):
         data = request.data
-        entidades_Solidaria = data.get("entidad", {}).get("solidaria", [])
+        entidades_solidaria = data.get("entidad", {}).get("solidaria", [])
         periodo = data.get("año")
         mes = data.get("mes")
         mes_str = get_month_name(mes)
 
-        # if periodo == 2024 and mes == 8:
-        #     mes_str = get_month_name(mes).capitalize()
-        # elif periodo == 2024 and mes >= 9:
-        #     mes_str = get_month_name(mes).lower()
-        # else:
-        #     mes_str = get_month_name(mes)
-
-        nit = entidades_Solidaria[0].get("nit")
-        dv = entidades_Solidaria[0].get("dv")
+        # Extraemos los datos del primer elemento
+        nit = entidades_solidaria[0].get("nit")
+        dv = entidades_solidaria[0].get("dv")
         formatted_nit_dv = format_nit_dv(nit, dv)
+
         results = []
+        baseUrl_entidades_solidaria, campoCuenta = get_api_details(periodo)
+        url_solidaria = (
+            f"{baseUrl_entidades_solidaria}&$where=a_o='{periodo}' AND mes='{mes_str}' AND nit='{formatted_nit_dv}'"
+        )
 
-        if periodo == 2020:
-            baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/78xz-k3hv.json?$limit=100000"
-            campoCuenta = 'codcuenta'
-        elif periodo == 2021:
-            baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/irgu-au8v.json?$limit=100000"
-            campoCuenta = 'codrenglon'
+        saldos_current = defaultdict(lambda: {"saldo": Decimal(0), "nombreCuenta": ""})
+
+        # Intentamos obtener datos desde la API
+        api_data = list(self.obtener_saldos_api(url_solidaria, campoCuenta))
+        if api_data:
+            for saldo in api_data:
+                saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
+                saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
         else:
-            baseUrl_entidadesSolidaria = "https://www.datos.gov.co/resource/tic6-rbue.json?$limit=100000"
-            campoCuenta = 'codrenglon'
+            # Si no hay datos desde la API, se obtienen desde la base de datos
+            for saldo in self.obtener_saldos_db(entidades_solidaria, periodo, mes):
+                saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
+                saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
 
-        def obtener_saldos_api():
-            url_solidaria = f"{baseUrl_entidadesSolidaria}&$where=a_o='{periodo}' AND mes='{mes_str}' AND nit='{formatted_nit_dv}'"
-            response_solidaria = requests.get(url_solidaria)
-            if response_solidaria.status_code == 200:
-                all_data = response_solidaria.json()
+        cuentas_detalles = [
+            {
+                "cuenta": cuenta,
+                "nombreCuenta": info["nombreCuenta"],
+                "total_saldo": info["saldo"]
+            }
+            for cuenta, info in saldos_current.items()
+        ]
+
+        cuentas_detalles = sorted(cuentas_detalles, key=lambda x: x["cuenta"])
+
+        for entidad in entidades_solidaria:
+            results.append({
+                "año": periodo,
+                "mes": mes,
+                "nit": entidad.get("nit"),
+                "sigla": entidad.get("sigla"),
+                "RazonSocial": entidad.get("RazonSocial"),
+                "cuentas_detalles": cuentas_detalles
+            })
+
+        return Response(data=results, status=status.HTTP_200_OK)
+
+    def obtener_saldos_api(self, url, campoCuenta):
+        max_retries = 20
+        retry_delay = 2
+
+        for attempt in range(max_retries):
+            try:
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                all_data = response.json()
+                print(f"BALANCE IND Obtenidos {len(all_data)} registros de la API en el intento {attempt + 1}")
                 if all_data:
                     for result in all_data:
                         nit = result.get("nit")
@@ -1178,59 +1245,28 @@ class BalCoopApiViewBalanceIndependiente(APIView):
                             "nombreCuenta": nombreCuenta,
                             "valor": valor
                         }
-            else:
-                print(f"Error al obtener datos de la API. Status code: {response_solidaria.status_code}")
-            return []  
+                break
 
-        def obtener_saldos_db():
-            for nit_info in entidades_Solidaria:
-                razon_social = nit_info.get("RazonSocial")
-                q_current_period = Q(entidad_RS=razon_social, periodo=periodo, mes=mes)
-                query_results_current = BalCoopModel.objects.filter(q_current_period).values("entidad_RS", "puc_codigo", "saldo")
+            except requests.exceptions.Timeout:
+                print(f"BALANCE IND Timeout en intento {attempt + 1}/{max_retries}")
+                if attempt < max_retries - 1:
+                    sleep(retry_delay)
+            except requests.RequestException as e:
+                print(f"BALANCE IND Error no manejado en el intento {attempt + 1}: {e}")
+                break
 
-                for result in query_results_current:
-                    nombreCuenta = PucCoopModel.objects.filter(Codigo=result["puc_codigo"]).first()
-                    nombreCuenta = nombreCuenta.Descripcion if nombreCuenta else "Cuenta no encontrada"
-                    
-                    yield {
-                        "razon_social": razon_social,
-                        "cuenta": result["puc_codigo"],
-                        "nombreCuenta": nombreCuenta,
-                        "valor": Decimal(result["saldo"])
-                    }
+    def obtener_saldos_db(self, entidades_solidaria, periodo, mes):
+        for nit_info in entidades_solidaria:
+            razon_social = nit_info.get("RazonSocial")
+            q_current_period = Q(entidad_RS=razon_social, periodo=periodo, mes=mes)
+            query_results_current = BalCoopModel.objects.filter(q_current_period).values("entidad_RS", "puc_codigo", "saldo")
 
-        saldos_current = defaultdict(lambda: {"saldo": Decimal(0), "nombreCuenta": ""})
-
-        api_data = list(obtener_saldos_api())
-        if api_data:
-            for saldo in api_data:
-                saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
-                saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
-        else:
-            for saldo in obtener_saldos_db():
-                saldos_current[saldo["cuenta"]]["saldo"] = saldo["valor"]
-                saldos_current[saldo["cuenta"]]["nombreCuenta"] = saldo["nombreCuenta"]
-
-        cuentas_detalles = [
-            {
-                "cuenta": cuenta,
-                "nombreCuenta": data["nombreCuenta"],
-                "total_saldo": data["saldo"]
-            }
-            for cuenta, data in saldos_current.items()
-        ]
-
-        cuentas_detalles = sorted(cuentas_detalles, key=lambda x: x["cuenta"])
-
-        for entidad in entidades_Solidaria:
-            razon_social = entidad.get("RazonSocial")
-            results.append({
-                "año": periodo,
-                "mes": mes,
-                "nit": entidad.get("nit"),
-                "sigla": entidad.get("sigla"),
-                "RazonSocial": razon_social,
-                "cuentas_detalles": cuentas_detalles
-            })
-
-        return Response(data=results, status=status.HTTP_200_OK)
+            for result in query_results_current:
+                nombreCuenta_obj = PucCoopModel.objects.filter(Codigo=result["puc_codigo"]).first()
+                nombreCuenta = nombreCuenta_obj.Descripcion if nombreCuenta_obj else "Cuenta no encontrada"
+                yield {
+                    "razon_social": razon_social,
+                    "cuenta": result["puc_codigo"],
+                    "nombreCuenta": nombreCuenta,
+                    "valor": Decimal(result["saldo"])
+                }

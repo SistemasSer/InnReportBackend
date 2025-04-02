@@ -245,7 +245,8 @@ class BalSupApiViewIndicador(APIView):
         mes = bloque.get("mes")
         mes_decimal = Decimal(mes)
         fecha1_str, fecha2_str = self.build_dates(periodo, mes)
-        puc_codes_current = ["100000", "110000", "120000", "130000", "140000", "210000", "240000", "250000", "300000", "310000", "320000", "370500", "391500", "410200", "510200", "510300"]
+        # puc_codes_current = ["100000", "110000", "120000", "130000", "140000", "210000", "240000", "250000", "300000", "310000", "320000", "370500", "391500", "410200", "510200", "510300"]
+        puc_codes_current = ["100000", "110000", "120000", "130000", "140000", "210000", "240000", "250000", "300000", "310000", "320000", "370500", "391500", "410200", "510200", "510300", "512000", "517240", "511800", "513025", "513030", "514500", "516000", "516500", "519005", "519010", "519020", "519025", "519030", "519035", "519040", "519045", "519065", "519070", "519095", "519015", "513010", "513015", "517500", "517800", "518000", "517005"]
         puc_codes_prev = ["100000", "140000", "210000", "240000", "300000"]
         saldos_current = self.get_saldos(fecha1_str, fecha2_str, puc_codes_current)
         periodo_anterior_actual = periodo - 1
@@ -365,6 +366,14 @@ class BalSupApiViewIndicador(APIView):
             (saldos_current[razon_social]["110000"] + saldos_current[razon_social]["120000"] + saldos_current[razon_social]["130000"] - (saldos_current[razon_social]["250000"] * 20 / 100)),
             denominator_disponible
         )
+        # Gastos operativos
+        indicador_personal = safe_division(saldos_current[razon_social]["512000"] + saldos_current[razon_social]["517240"], saldos_current[razon_social]["100000"])
+        administrativos_cuentas = ( saldos_current[razon_social]["511800"] + saldos_current[razon_social]["513025"] + saldos_current[razon_social]["513030"] + saldos_current[razon_social]["514500"] + saldos_current[razon_social]["516000"] + saldos_current[razon_social]["516500"] + saldos_current[razon_social]["519005"] + saldos_current[razon_social]["519010"] + saldos_current[razon_social]["519020"] + saldos_current[razon_social]["519025"] + saldos_current[razon_social]["519030"] + saldos_current[razon_social]["519035"] + saldos_current[razon_social]["519040"] + saldos_current[razon_social]["519045"] + saldos_current[razon_social]["519065"] + saldos_current[razon_social]["519070"] + saldos_current[razon_social]["519095"])
+        indicador_administrativos = safe_division( administrativos_cuentas - saldos_current[razon_social]["519015"] - saldos_current[razon_social]["513010"] - saldos_current[razon_social]["513015"], saldos_current[razon_social]["100000"])
+        indicador_mercader = safe_division(saldos_current[razon_social]["519015"], saldos_current[razon_social]["100000"])
+        indicador_gobernabilidad = safe_division(saldos_current[razon_social]["513010"] + saldos_current[razon_social]["513015"], saldos_current[razon_social]["100000"])
+        indicador_depreAmorti = safe_division(saldos_current[razon_social]["517500"] + saldos_current[razon_social]["517800"] + saldos_current[razon_social]["518000"] , saldos_current[razon_social]["100000"])
+        deteriodo_gastosOpetativos = safe_division(saldos_current[razon_social]["517005"], saldos_current[razon_social]["100000"])
 
         return {
             "indicadorCartera": indicador_cartera,
@@ -378,6 +387,13 @@ class BalSupApiViewIndicador(APIView):
             "indicadorCostDeposito": indicador_costos_deposito,
             "indicadorCredBanco": indicador_credito_banco,
             "indicadorDisponible": indicador_disponible,
+            # Gastos Operativos
+            "indicadorPersonal": indicador_personal,
+            "indicadorAdministrativos": indicador_administrativos,
+            "indicadorMercader": indicador_mercader,
+            "indicadorGobernabilidad": indicador_gobernabilidad,
+            "indicadorDepreciacionesAmort": indicador_depreAmorti,
+            "DeterioroGastosOperativos": deteriodo_gastosOpetativos,
         }
 
 thread_IndicadorC = threading.local()
@@ -573,47 +589,89 @@ class BalSupApiViewIndicadorC(APIView):
         #DEPOSITO
         deposito = saldos_current[razon_social]["210000"]
         # print(deposito)
-        dp_cuenta_corriente = safe_division(saldos_current[razon_social]["210500"], deposito)
-        dp_simple = safe_division(saldos_current[razon_social]["210600"], deposito)
-        dp_certificado_termino = safe_division(saldos_current[razon_social]["210700"], deposito)
-        dp_ahorro = safe_division(saldos_current[razon_social]["210800"], deposito)
-        dp_cuenta_ahorro_especial = safe_division(saldos_current[razon_social]["210900"], deposito)
-        dp_certificado_ahorro_varolReal = safe_division(saldos_current[razon_social]["211000"], deposito)
-        dp_documento_pagar = safe_division(saldos_current[razon_social]["211100"], deposito)
-        dp_cuenta_centralizada = safe_division(saldos_current[razon_social]["211200"], deposito)
-        dp_fondos_cuentas = safe_division(saldos_current[razon_social]["211300"], deposito)
-        dp_cesantias_fondoNacional = safe_division(saldos_current[razon_social]["211400"], deposito)
-        dp_bancos_corresponsales = safe_division(saldos_current[razon_social]["211500"], deposito)
-        dp_especiales = safe_division(saldos_current[razon_social]["211600"], deposito)
-        dp_exigibilidad_servico = safe_division(saldos_current[razon_social]["211700"], deposito)
-        dp_recaudo = safe_division(saldos_current[razon_social]["211800"], deposito)
-        dp_establecimientos_afiliados = safe_division(saldos_current[razon_social]["211900"], deposito)
-        dp_electronicos = safe_division(saldos_current[razon_social]["212000"], deposito)
-        dp_fondos_interbancarios = safe_division(saldos_current[razon_social]["212200"], deposito)
-        dp_fondos_interasociadas = safe_division(saldos_current[razon_social]["212300"], deposito)
-        dp_operaciones_reporto = safe_division(saldos_current[razon_social]["212400"], deposito)
-        dp_operaciones_simultaneas = safe_division(saldos_current[razon_social]["212500"], deposito)
-        dp_operaciones_transferencia = safe_division(saldos_current[razon_social]["212600"], deposito)
-        dp_billetes_circulacion = safe_division(saldos_current[razon_social]["212700"], deposito)
-        dp_pagos_internacionales = safe_division(saldos_current[razon_social]["212800"], deposito)
-        dp_compromisos = safe_division(saldos_current[razon_social]["212900"], deposito)
-        dp_titulos_inversion = safe_division(saldos_current[razon_social]["213000"], deposito)
-        dp_titulo_regulacion_banco = safe_division(saldos_current[razon_social]["213200"], deposito)
-        dp_titulo_regulacion = safe_division(saldos_current[razon_social]["214600"], deposito)
-        dp_operaciones_credito_internas_corto = safe_division(saldos_current[razon_social]["214700"], deposito)
-        dp_operaciones_credito_internas_largo = safe_division(saldos_current[razon_social]["214800"], deposito)
-        dp_operaciones_credito_externas_corto = safe_division(saldos_current[razon_social]["214900"], deposito)
-        dp_operaciones_credito_externas_largo = safe_division(saldos_current[razon_social]["215000"], deposito)
-        dp_operaciones_financiera_internas_corto = safe_division(saldos_current[razon_social]["215100"], deposito)
-        dp_operaciones_financiera_internas_largo = safe_division(saldos_current[razon_social]["215200"], deposito)
-        dp_operaciones_financiera_externas_corto = safe_division(saldos_current[razon_social]["215300"], deposito)
-        dp_operaciones_financiera_externas_largo = safe_division(saldos_current[razon_social]["215400"], deposito)
-        dp_operaciones_conjuntas = safe_division(saldos_current[razon_social]["215500"], deposito)
-        dp_cuentas_canceladas = safe_division(saldos_current[razon_social]["215600"], deposito)
-        dp_operaciones_contratacion = safe_division(saldos_current[razon_social]["215700"], deposito)
-        dp_pasivos_arrendamientos = safe_division(saldos_current[razon_social]["218000"], deposito)
+        dp_cuenta_corriente = saldos_current[razon_social]["210500"]
+        dp_simple = saldos_current[razon_social]["210600"]
+        dp_certificado_termino = saldos_current[razon_social]["210700"]
+        dp_ahorro = saldos_current[razon_social]["210800"]
+        dp_cuenta_ahorro_especial = saldos_current[razon_social]["210900"]
+        dp_certificado_ahorro_valorReal = saldos_current[razon_social]["211000"]
+        dp_documento_pagar = saldos_current[razon_social]["211100"]
+        dp_cuenta_centralizada = saldos_current[razon_social]["211200"]
+        dp_fondos_cuentas = saldos_current[razon_social]["211300"]
+        dp_cesantias_fondoNacional = saldos_current[razon_social]["211400"]
+        dp_bancos_corresponsales = saldos_current[razon_social]["211500"]
+        dp_especiales = saldos_current[razon_social]["211600"]
+        dp_exigibilidad_servico = saldos_current[razon_social]["211700"]
+        dp_recaudo = saldos_current[razon_social]["211800"]
+        dp_establecimientos_afiliados = saldos_current[razon_social]["211900"]
+        dp_electronicos = saldos_current[razon_social]["212000"]
+        dp_fondos_interbancarios = saldos_current[razon_social]["212200"]
+        dp_fondos_interasociadas = saldos_current[razon_social]["212300"]
+        dp_operaciones_reporto = saldos_current[razon_social]["212400"]
+        dp_operaciones_simultaneas = saldos_current[razon_social]["212500"]
+        dp_operaciones_transferencia = saldos_current[razon_social]["212600"]
+        dp_billetes_circulacion = saldos_current[razon_social]["212700"]
+        dp_pagos_internacionales = saldos_current[razon_social]["212800"]
+        dp_compromisos = saldos_current[razon_social]["212900"]
+        dp_titulos_inversion = saldos_current[razon_social]["213000"]
+        dp_titulo_regulacion_banco = saldos_current[razon_social]["213200"]
+        dp_titulo_regulacion = saldos_current[razon_social]["214600"]
+        dp_operaciones_credito_internas_corto = saldos_current[razon_social]["214700"]
+        dp_operaciones_credito_internas_largo = saldos_current[razon_social]["214800"]
+        dp_operaciones_credito_externas_corto = saldos_current[razon_social]["214900"]
+        dp_operaciones_credito_externas_largo = saldos_current[razon_social]["215000"]
+        dp_operaciones_financiera_internas_corto = saldos_current[razon_social]["215100"]
+        dp_operaciones_financiera_internas_largo = saldos_current[razon_social]["215200"]
+        dp_operaciones_financiera_externas_corto = saldos_current[razon_social]["215300"]
+        dp_operaciones_financiera_externas_largo = saldos_current[razon_social]["215400"]
+        dp_operaciones_conjuntas = saldos_current[razon_social]["215500"]
+        dp_cuentas_canceladas = saldos_current[razon_social]["215600"]
+        dp_operaciones_contratacion = saldos_current[razon_social]["215700"]
+        dp_pasivos_arrendamientos = saldos_current[razon_social]["218000"]
 
-        dp_total = (dp_cuenta_corriente + dp_simple + dp_certificado_termino + dp_ahorro + dp_cuenta_ahorro_especial + dp_certificado_ahorro_varolReal + dp_documento_pagar + dp_cuenta_centralizada + dp_fondos_cuentas + dp_cesantias_fondoNacional + dp_bancos_corresponsales + dp_especiales + dp_exigibilidad_servico + dp_recaudo + dp_establecimientos_afiliados + dp_electronicos + dp_fondos_interbancarios + dp_fondos_interasociadas + dp_operaciones_reporto + dp_operaciones_simultaneas + dp_operaciones_transferencia + dp_billetes_circulacion + dp_pagos_internacionales + dp_compromisos + dp_titulos_inversion + dp_titulo_regulacion_banco + dp_titulo_regulacion + dp_operaciones_credito_internas_corto + dp_operaciones_credito_internas_largo + dp_operaciones_credito_externas_corto + dp_operaciones_credito_externas_largo + dp_operaciones_financiera_internas_corto + dp_operaciones_financiera_internas_largo + dp_operaciones_financiera_externas_corto + dp_operaciones_financiera_externas_largo + dp_operaciones_conjuntas + dp_cuentas_canceladas + dp_operaciones_contratacion + dp_pasivos_arrendamientos)
+        partc_cuenta_corriente = safe_division(saldos_current[razon_social]["210500"], deposito)
+        partc_simple = safe_division(saldos_current[razon_social]["210600"], deposito)
+        partc_certificado_termino = safe_division(saldos_current[razon_social]["210700"], deposito)
+        partc_ahorro = safe_division(saldos_current[razon_social]["210800"], deposito)
+        partc_cuenta_ahorro_especial = safe_division(saldos_current[razon_social]["210900"], deposito)
+        partc_certificado_ahorro_valorReal = safe_division(saldos_current[razon_social]["211000"], deposito)
+        partc_documento_pagar = safe_division(saldos_current[razon_social]["211100"], deposito)
+        partc_cuenta_centralizada = safe_division(saldos_current[razon_social]["211200"], deposito)
+        partc_fondos_cuentas = safe_division(saldos_current[razon_social]["211300"], deposito)
+        partc_cesantias_fondoNacional = safe_division(saldos_current[razon_social]["211400"], deposito)
+        partc_bancos_corresponsales = safe_division(saldos_current[razon_social]["211500"], deposito)
+        partc_especiales = safe_division(saldos_current[razon_social]["211600"], deposito)
+        partc_exigibilidad_servico = safe_division(saldos_current[razon_social]["211700"], deposito)
+        partc_recaudo = safe_division(saldos_current[razon_social]["211800"], deposito)
+        partc_establecimientos_afiliados = safe_division(saldos_current[razon_social]["211900"], deposito)
+        partc_electronicos = safe_division(saldos_current[razon_social]["212000"], deposito)
+        partc_fondos_interbancarios = safe_division(saldos_current[razon_social]["212200"], deposito)
+        partc_fondos_interasociadas = safe_division(saldos_current[razon_social]["212300"], deposito)
+        partc_operaciones_reporto = safe_division(saldos_current[razon_social]["212400"], deposito)
+        partc_operaciones_simultaneas = safe_division(saldos_current[razon_social]["212500"], deposito)
+        partc_operaciones_transferencia = safe_division(saldos_current[razon_social]["212600"], deposito)
+        partc_billetes_circulacion = safe_division(saldos_current[razon_social]["212700"], deposito)
+        partc_pagos_internacionales = safe_division(saldos_current[razon_social]["212800"], deposito)
+        partc_compromisos = safe_division(saldos_current[razon_social]["212900"], deposito)
+        partc_titulos_inversion = safe_division(saldos_current[razon_social]["213000"], deposito)
+        partc_titulo_regulacion_banco = safe_division(saldos_current[razon_social]["213200"], deposito)
+        partc_titulo_regulacion = safe_division(saldos_current[razon_social]["214600"], deposito)
+        partc_operaciones_credito_internas_corto = safe_division(saldos_current[razon_social]["214700"], deposito)
+        partc_operaciones_credito_internas_largo = safe_division(saldos_current[razon_social]["214800"], deposito)
+        partc_operaciones_credito_externas_corto = safe_division(saldos_current[razon_social]["214900"], deposito)
+        partc_operaciones_credito_externas_largo = safe_division(saldos_current[razon_social]["215000"], deposito)
+        partc_operaciones_financiera_internas_corto = safe_division(saldos_current[razon_social]["215100"], deposito)
+        partc_operaciones_financiera_internas_largo = safe_division(saldos_current[razon_social]["215200"], deposito)
+        partc_operaciones_financiera_externas_corto = safe_division(saldos_current[razon_social]["215300"], deposito)
+        partc_operaciones_financiera_externas_largo = safe_division(saldos_current[razon_social]["215400"], deposito)
+        partc_operaciones_conjuntas = safe_division(saldos_current[razon_social]["215500"], deposito)
+        partc_cuentas_canceladas = safe_division(saldos_current[razon_social]["215600"], deposito)
+        partc_operaciones_contratacion = safe_division(saldos_current[razon_social]["215700"], deposito)
+        partc_pasivos_arrendamientos = safe_division(saldos_current[razon_social]["218000"], deposito)
+
+        dp_total = (
+            partc_cuenta_corriente+partc_simple+partc_certificado_termino+partc_ahorro+partc_cuenta_ahorro_especial+partc_certificado_ahorro_valorReal+partc_documento_pagar+partc_cuenta_centralizada+partc_fondos_cuentas+partc_cesantias_fondoNacional+partc_bancos_corresponsales+partc_especiales+partc_exigibilidad_servico+partc_recaudo+partc_establecimientos_afiliados+partc_electronicos+partc_fondos_interbancarios+partc_fondos_interasociadas+partc_operaciones_reporto+partc_operaciones_simultaneas+partc_operaciones_transferencia+partc_billetes_circulacion+partc_pagos_internacionales+partc_compromisos+partc_titulos_inversion+partc_titulo_regulacion_banco+partc_titulo_regulacion+partc_operaciones_credito_internas_corto+partc_operaciones_credito_internas_largo+partc_operaciones_credito_externas_corto+partc_operaciones_credito_externas_largo+partc_operaciones_financiera_internas_corto+partc_operaciones_financiera_internas_largo+partc_operaciones_financiera_externas_corto+partc_operaciones_financiera_externas_largo+partc_operaciones_conjuntas+partc_cuentas_canceladas+partc_operaciones_contratacion+partc_pasivos_arrendamientos
+        )
 
         return {
             "consumoA": consumo_a,
@@ -679,44 +737,85 @@ class BalSupApiViewIndicadorC(APIView):
 
             "deposito": deposito,
             "depositoAhorro": dp_ahorro, #2108
+            "particionAhorro": partc_ahorro, #2108
             "depositoAhorroTermino": dp_certificado_termino, #2107
+            "particionAhorroTermino": partc_certificado_termino, #2107
+
             "depositoCuentaCorriente": dp_cuenta_corriente, #2105
+            "particionCuentaCorriente": partc_cuenta_corriente, #2105
             "depositoSimple": dp_simple, #2106
+            "particionSimple": partc_simple, #2106
             "depositoCuentaAhorroEspecial": dp_cuenta_ahorro_especial, #2109
-            "depositoCertificadoAhorroVarolReal": dp_certificado_ahorro_varolReal, #2110
+            "particionCuentaAhorroEspecial": partc_cuenta_ahorro_especial, #2109
+            "depositoCertificadoAhorroValorReal": dp_certificado_ahorro_valorReal, #2110
+            "particionCertificadoAhorroValorReal": partc_certificado_ahorro_valorReal, #2110
             "depositoDocumentoPagar": dp_documento_pagar, #2111
+            "particionDocumentoPagar": partc_documento_pagar, #2111
             "depositoCuentaCentralizada": dp_cuenta_centralizada, #2112
+            "particionCuentaCentralizada": partc_cuenta_centralizada, #2112
             "depositoFondosCuentas": dp_fondos_cuentas, #2113
+            "particionFondosCuentas": partc_fondos_cuentas, #2113
             "depositoCesantiasFondoNacional": dp_cesantias_fondoNacional, #2114
+            "particionCesantiasFondoNacional": partc_cesantias_fondoNacional, #2114
             "depositoBancosCorresponsales": dp_bancos_corresponsales, #2115
+            "particionBancosCorresponsales": partc_bancos_corresponsales, #2115
             "depositoEspeciales": dp_especiales, #2116
+            "particionEspeciales": partc_especiales, #2116
             "depositoExigibilidadServico": dp_exigibilidad_servico, #2117
+            "particionExigibilidadServico": partc_exigibilidad_servico, #2117
             "depositoRecaudo": dp_recaudo, #2118
+            "particionRecaudo": partc_recaudo, #2118
             "depositoEstablecimientosAfiliados": dp_establecimientos_afiliados, #2119
+            "particionEstablecimientosAfiliados": partc_establecimientos_afiliados, #2119
             "depositoElectronicos": dp_electronicos, #2120
+            "particionElectronicos": partc_electronicos, #2120
             "depositoFondosInterbancarios": dp_fondos_interbancarios, #2122
+            "particionFondosInterbancarios": partc_fondos_interbancarios, #2122
             "depositoFondosInterasociadas": dp_fondos_interasociadas, #2123
+            "particionFondosInterasociadas": partc_fondos_interasociadas, #2123
             "depositoOperacionesReporto": dp_operaciones_reporto, #2124
+            "particionOperacionesReporto": partc_operaciones_reporto, #2124
             "depositoOperacionesSimultaneas": dp_operaciones_simultaneas, #2125
+            "particionOperacionesSimultaneas": partc_operaciones_simultaneas, #2125
             "depositoOperacionesTransferencia": dp_operaciones_transferencia, #2126
+            "particionOperacionesTransferencia": partc_operaciones_transferencia, #2126
             "depositoBilletesCirculacion": dp_billetes_circulacion, #2127
+            "particionBilletesCirculacion": partc_billetes_circulacion, #2127
             "depositoPagosInternacionales": dp_pagos_internacionales, #2128
+            "particionPagosInternacionales": partc_pagos_internacionales, #2128
             "depositoCompromisos": dp_compromisos, #2129
+            "particionCompromisos": partc_compromisos, #2129
             "depositoTitulosInversion": dp_titulos_inversion, #2130
+            "particionTitulosInversion": partc_titulos_inversion, #2130
             "depositoTituloRegulacionBanco": dp_titulo_regulacion_banco, #2132
+            "particionTituloRegulacionBanco": partc_titulo_regulacion_banco, #2132
             "depositoTituloRegulacion": dp_titulo_regulacion, #2146
+            "particionTituloRegulacion": partc_titulo_regulacion, #2146
             "depositoOperacionesCreditoInternasCorto": dp_operaciones_credito_internas_corto, #2147
+            "particionOperacionesCreditoInternasCorto": partc_operaciones_credito_internas_corto, #2147
             "depositoOperacionesCreditoInternasLargo": dp_operaciones_credito_internas_largo, #2148
+            "particionOperacionesCreditoInternasLargo": partc_operaciones_credito_internas_largo, #2148
             "depositoOperacionesCreditoExternasCorto": dp_operaciones_credito_externas_corto, #2149
+            "particionOperacionesCreditoExternasCorto": partc_operaciones_credito_externas_corto, #2149
             "depositoOperacionesCreditoExternasLargo": dp_operaciones_credito_externas_largo, #2150
+            "particionOperacionesCreditoExternasLargo": partc_operaciones_credito_externas_largo, #2150
             "depositoOperacionesFinancieraInternasCorto": dp_operaciones_financiera_internas_corto, #2151
+            "particionOperacionesFinancieraInternasCorto": partc_operaciones_financiera_internas_corto, #2151
             "depositoOperacionesFinancieraInternasLargo": dp_operaciones_financiera_internas_largo, #2152
+            "particionOperacionesFinancieraInternasLargo": partc_operaciones_financiera_internas_largo, #2152
             "depositoOperacionesFinancieraExternasCorto": dp_operaciones_financiera_externas_corto, #2153
+            "particionOperacionesFinancieraExternasCorto": partc_operaciones_financiera_externas_corto, #2153
             "depositoOperacionesFinancieraExternasLargo": dp_operaciones_financiera_externas_largo, #2154
+            "particionOperacionesFinancieraExternasLargo": partc_operaciones_financiera_externas_largo, #2154
             "depositoOperacionesConjuntas": dp_operaciones_conjuntas, #2155
+            "particionOperacionesConjuntas": partc_operaciones_conjuntas, #2155
             "depositoCuentasCanceladas": dp_cuentas_canceladas, #2156
+            "particionCuentasCanceladas": partc_cuentas_canceladas, #2156
             "depositoOperacionesContratacion": dp_operaciones_contratacion, #2157
+            "particionOperacionesContratacion": partc_operaciones_contratacion, #2157
             "depositoPasivosArrendamientos": dp_pasivos_arrendamientos, #2180
+            "particionPasivosArrendamientos": partc_pasivos_arrendamientos, #2180
+
             "depositoPorcentajeTotal": dp_total
         }
 

@@ -2,6 +2,7 @@
 .gitignore
 debug.log
 env/
+virtualenv/
 .vscode/
 media/archivo/
 *.pyc
