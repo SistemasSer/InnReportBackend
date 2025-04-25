@@ -375,6 +375,10 @@ class BalSupApiViewIndicador(APIView):
         indicador_depreAmorti = safe_division(saldos_current[razon_social]["517500"] + saldos_current[razon_social]["517800"] + saldos_current[razon_social]["518000"] , saldos_current[razon_social]["100000"])
         deteriodo_gastosOpetativos = safe_division(saldos_current[razon_social]["517005"], saldos_current[razon_social]["100000"])
 
+        totalGastosOperativos_cuentas = (saldos_current[razon_social]["512000"] + saldos_current[razon_social]["517240"] + administrativos_cuentas + saldos_current[razon_social]["519015"] + saldos_current[razon_social]["513010"] + saldos_current[razon_social]["513015"] + saldos_current[razon_social]["517500"] + saldos_current[razon_social]["517800"] + saldos_current[razon_social]["518000"])
+
+        indicador_totalGastosOperativos = safe_division(totalGastosOperativos_cuentas, saldos_current[razon_social]["100000"])
+
         return {
             "indicadorCartera": indicador_cartera,
             "indicadorDeposito": indicador_deposito,
@@ -387,13 +391,16 @@ class BalSupApiViewIndicador(APIView):
             "indicadorCostDeposito": indicador_costos_deposito,
             "indicadorCredBanco": indicador_credito_banco,
             "indicadorDisponible": indicador_disponible,
+            "DeterioroGastosOperativos": deteriodo_gastosOpetativos,
             # Gastos Operativos
             "indicadorPersonal": indicador_personal,
-            "indicadorAdministrativos": indicador_administrativos,
-            "indicadorMercader": indicador_mercader,
+            # "indicadorAdministrativos": indicador_administrativos,
+            # "indicadorMercader": indicador_mercader,
+            "indicadorGenerales": indicador_administrativos,
+            "indicadorMercadeo": indicador_mercader,
             "indicadorGobernabilidad": indicador_gobernabilidad,
             "indicadorDepreciacionesAmort": indicador_depreAmorti,
-            "DeterioroGastosOperativos": deteriodo_gastosOpetativos,
+            "indicadorTotalGastonOperativos": indicador_totalGastosOperativos,
         }
 
 thread_IndicadorC = threading.local()
@@ -423,7 +430,7 @@ class BalSupApiViewIndicadorC(APIView):
         mes = bloque.get("mes")
         mes_decimal = Decimal(mes)
         puc_codes_current = ["140800", "140805", "140810", "140815", "140820", "140825","149100", "141200", "141205", "141210", "141215", "141220","141225", "149300", "141000", "141005", "141010", "141015","141020", "141025", "149500", "148900", "140400", "140405","140410", "140415", "140420", "140425", "140430", "140435", "140440", "140445", "140450", "141400", "141405","141410", "141415", "141420", "141425", "148800", "141430", "141435", "141440", "141445", "141450", "141460", "141465", "141470", "141475", "141480", "812000",
-        "210000", "210500", "210600", "210700", "210800", "210900", "211000", "211100", "211200", "211300", "211400", "211500", "211600", "211700", "211800", "211900", "212000", "212200", "212300", "212400", "212500", "212600", "212700", "212800", "212900", "213000", "213200", "214600", "214700", "214800", "214900", "215000", "215100", "215200", "215300", "215400", "215500", "215600", "215700", "218000"
+        "210000", "210500", "210600", "210700", "210800", "210900", "211000", "211100", "211200", "211300", "211400", "211500", "211600", "211700", "211800", "211900", "212000", "212200", "212300", "212400", "212500", "212600", "212700", "212800", "212900", "213000", "213200", "214600", "214700", "214800", "214900", "215000", "215100", "215200", "215300", "215400", "215500", "215600", "215700", "218000", "149800"
         ]
         fecha1_str, fecha2_str = self.build_dates(periodo, mes)
         saldos_current = self.get_saldos(fecha1_str, fecha2_str, puc_codes_current)
@@ -563,13 +570,14 @@ class BalSupApiViewIndicadorC(APIView):
         empleados_d = (saldos_current[razon_social]["141420"] + saldos_current[razon_social]["141445"] + saldos_current[razon_social]["141475"])
         empleados_e = (saldos_current[razon_social]["141425"] + saldos_current[razon_social]["141450"] + saldos_current[razon_social]["141480"])
         empleados_total = (saldos_current[razon_social]["141400"])
-        empleados_deterioro = saldos_current[razon_social]["149100"]
+        # empleados_deterioro = saldos_current[razon_social]["149100"]
+        empleados_deterioro = saldos_current[razon_social]["148800"]
         denominator_empleados_ind_mora = (empleados_a + empleados_b + empleados_c + empleados_d + empleados_e)
         empleados_ind_mora = safe_division((empleados_b + empleados_c + empleados_d + empleados_e), denominator_empleados_ind_mora)
         empleados_cartera_improductiva = safe_division((empleados_c + empleados_d + empleados_e), denominator_empleados_ind_mora)
         denominator_empleados_porc_cobertura = (empleados_b + empleados_c + empleados_d + empleados_e)
         empleados_porc_cobertura = safe_division(empleados_deterioro, denominator_empleados_porc_cobertura)
-
+        
         #TOTAL
         total_a = (consumo_a + microcredito_a + comercial_a + vivienda_a + empleados_a)
         total_b = (consumo_b + microcredito_b + comercial_b + vivienda_b + empleados_b)
@@ -578,10 +586,15 @@ class BalSupApiViewIndicadorC(APIView):
         total_e = (consumo_e + microcredito_e + comercial_e + vivienda_e + empleados_e)
         total_castigos = saldos_current[razon_social]["812000"]
         total_total = (consumo_total + microcredito_total + comercial_total + vivienda_total + empleados_total)
-        total_deterioro = (consumo_deterioro + microcredito_deterioro + comercial_deterioro + vivienda_deterioro + empleados_deterioro)
+
+        total_deterioro_ind = (consumo_deterioro + microcredito_deterioro + comercial_deterioro + vivienda_deterioro + empleados_deterioro)
+        total_deterioro_gen = saldos_current[razon_social]["149800"]
+        total_deterioro = (total_deterioro_ind + total_deterioro_gen)
+
         denominator_total_ind_mora = (total_a + total_b + total_c + total_d + total_e)
         # total_ind_mora = (((total_b + total_c + total_d + total_e) / denominator_total_ind_mora) * 100 if denominator_total_ind_mora else 0)
         total_ind_mora = safe_division((total_b + total_c + total_d + total_e), denominator_total_ind_mora)
+        total_cart_impro = safe_division((total_c + total_d + total_e), denominator_total_ind_mora)
         denominator_total_porc_cobertura = (total_b + total_c + total_d + total_e)
         # total_porc_cobertura = ((total_deterioro / denominator_total_porc_cobertura) * 100 if denominator_total_porc_cobertura else 0)
         total_porc_cobertura = safe_division(total_deterioro, denominator_total_porc_cobertura)
@@ -732,6 +745,10 @@ class BalSupApiViewIndicadorC(APIView):
             "totalTotal": total_total,
             "totalCastigos": total_castigos,
             "totalIndMora": total_ind_mora,
+            "totalCartImpro": total_cart_impro,
+
+            "totalDeterioroInd": total_deterioro_ind,
+            "totalDeterioroGen": total_deterioro_gen,
             "totalDeterioro": total_deterioro,
             "totalPorcCobertura": total_porc_cobertura,
 
