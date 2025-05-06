@@ -25,7 +25,7 @@ def get_month_name(month_number):
         "MAYO", "JUNIO", "JULIO", "AGOSTO",
         "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
     ]
-    
+
     if 1 <= month_number <= 12:
         return month_names[month_number - 1]
     else:
