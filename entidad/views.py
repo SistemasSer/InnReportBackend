@@ -16,17 +16,29 @@ from entidad.serializers import EntidadSerializer
 
 logger = logging.getLogger('django')
 
+# def determinar_grupo(saldo):
+#     if saldo < 10000000000:
+#         return 1
+#     elif saldo <= 50000000000:
+#         return 2
+#     elif saldo <= 200000000000:
+#         return 3
+#     elif saldo <= 500000000000:
+#         return 4
+#     else:
+#         return 5
+
 def determinar_grupo(saldo):
-    if saldo < 10000000000:
+    uvr = 388
+    # basico
+    if saldo < (315000000 * uvr):
         return 1
-    elif saldo <= 50000000000:
+    # intermedia
+    elif saldo <= (1400000000 * uvr):
         return 2
-    elif saldo <= 200000000000:
-        return 3
-    elif saldo <= 500000000000:
-        return 4
+    # plena
     else:
-        return 5
+        return 3
 
 def format_nit_dv(nit, dv):
     nit_str = str(nit).zfill(9)

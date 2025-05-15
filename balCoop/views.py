@@ -894,7 +894,7 @@ class BalCoopApiViewIndicadorC(APIView):
 
         total_convenios = get_saldo(formatted_nit_dv, razon_social, "147300", saldos_current)
 
-        total_contable = (total_total + total_interes + total_conceptos + total_convenios)
+        # total_contable = (total_total + total_interes + total_conceptos + total_convenios - total_deterioro)
 
         # total_deterioro_ind = (consumo_deterioro + microcredito_deterioro + comercial_deterioro + vivienda_deterioro + empleados_deterioro + producto_deterioro)
         total_deterioro_ind = (
@@ -924,6 +924,8 @@ class BalCoopApiViewIndicadorC(APIView):
         total_deterioro_gen = get_saldo(formatted_nit_dv, razon_social, "146800", saldos_current)
 
         total_deterioro = (total_deterioro_ind + total_deterioro_gen)
+        
+        total_contable = (total_total + total_interes + total_conceptos + total_convenios - total_deterioro)
 
         denominator_total_ind_mora = (total_a + total_b + total_c + total_d + total_e)
         total_ind_mora = self.percentage((total_b + total_c + total_d + total_e),denominator_total_ind_mora)

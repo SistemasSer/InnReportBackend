@@ -223,7 +223,6 @@ def total_Financiera(anio, mes, tipoEntidad, cuenta):
     razones_sociales = [entidad.RazonSocial for entidad in entidades]
 
     cuenta_numeros = valores_cuentas_financiera(cuenta)
-    print(cuenta_numeros)
 
     resultadoDatosApi = get_api_financiera(anio, mes, cuenta_numeros, razones_sociales)
 
@@ -285,7 +284,7 @@ def get_api_solidaria(anio, mes, cuenta_numeros, formatted_nits_dvs):
     
     for attempt in range(max_retries):
         try:
-            response = requests.get(url, timeout=5)
+            response = requests.get(url, timeout=10)
             response.raise_for_status()
             all_data = response.json()
             print(f"TOTALES Obtenidos {len(all_data)} registros de la API para el periodo {anio} y mes {mes} en el intento {attempt + 1}")
@@ -475,37 +474,6 @@ def ordenar_datos(data_cruda, cuentita):
 
     return resultado
 
-# class TotalAccounts(APIView):
-#     def post(self, request, *args, **kwargs):
-#         data = request.data
-#         resultados = []
-
-#         for item in data:
-#             anio = item.get('anio', 'No disponible')
-#             mes = item.get('mes', 'No disponible')
-#             print(f"Año: {anio}, Mes: {mes}")
-
-#             tipo_entidad = item.get("TipoEntidad", [])
-#             cuentas_disponibles = item.get("cuentas")
-
-#             if not isinstance(tipo_entidad, list):
-#                 tipo_entidad = [tipo_entidad]
-
-#             for num in tipo_entidad:
-#                 if num in (0, 1, 3):
-#                     resultadoFinanciera = total_Financiera(anio, mes, num, cuentas_disponibles)
-#                     resultados.append(resultadoFinanciera)
-#                 elif num == 2:
-#                     resultadoSolidaria = total_solidaria(anio, mes, num, cuentas_disponibles)
-#                     resultados.append(resultadoSolidaria)
-#                 else:
-#                     print(f"Valor {num} no reconocido en TipoEntidad")
-
-#         prueba_resultado = ordenar_datos(resultados, cuentas_disponibles)
-
-#         return Response(prueba_resultado, status=status.HTTP_200_OK)
-
-
 class TotalAccounts(APIView):
     def post(self, request, *args, **kwargs):
         data = request.data
@@ -537,7 +505,7 @@ class TotalAccounts(APIView):
         for item in bloque:
             anio = item.get('anio', 'No disponible')
             mes = item.get('mes', 'No disponible')
-            print(f"Año: {anio}, Mes: {mes}")
+            # print(f"Año: {anio}, Mes: {mes}")
 
             tipo_entidad = item.get("TipoEntidad", [])
             cuentas_disponibles = item.get("cuentas")
