@@ -253,8 +253,9 @@ class BalCoopApiViewA(APIView):
 
     def get_saldos_api(self, base_url, campo_cuenta, periodo, mes, puc_codigo, formatted_nits_dvs):
         saldos = defaultdict(lambda: defaultdict(Decimal))
-        formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
-        url = f"{base_url}&$where=a_o='{periodo}' AND mes='{mes}' AND nit IN({formatted_nits_dvs_str}) AND {campo_cuenta}='{puc_codigo}'"
+        # formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
+        # url = f"{base_url}&$where=a_o='{periodo}' AND mes='{mes}' AND nit IN({formatted_nits_dvs_str}) AND {campo_cuenta}='{puc_codigo}'"
+        url = f"{base_url}&$where=a_o='{periodo}' AND mes='{mes}' AND {campo_cuenta}='{puc_codigo}'"
         print(f"{url}")
         max_retries = 20
         retry_delay = 2

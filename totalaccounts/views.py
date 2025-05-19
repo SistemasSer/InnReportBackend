@@ -26,7 +26,10 @@ def tipo_entidad_str(codigo):
         0: "Bancos",
         1: "Cooperativas Financieras",
         2: "Cooperativas de Ahorro y Crédito",
-        3: "Compañías de Financiamiento"
+        3: "Compañías de Financiamiento",
+        4: "Otras Cooperativas",
+        5: "Fondos de Empleados",
+        6: "Cooperativas de Aporte y Credito"
     }
     return entidad.get(codigo, "Código no válido")
 
@@ -277,7 +280,8 @@ def get_api_solidaria(anio, mes, cuenta_numeros, formatted_nits_dvs):
     saldos = defaultdict(lambda: defaultdict(Decimal))
     puc_codes_str = ','.join(f"'{code}'" for code in cuenta_numeros)
     formatted_nits_dvs_str = ','.join(f"'{nit_dv}'" for nit_dv in formatted_nits_dvs)
-    url = f"{base_url}&$where=a_o='{anio}' AND mes='{mes_str}' AND nit IN({formatted_nits_dvs_str}) AND {campo_cuenta} IN ({puc_codes_str})"
+    # url = f"{base_url}&$where=a_o='{anio}' AND mes='{mes_str}' AND nit IN({formatted_nits_dvs_str}) AND {campo_cuenta} IN ({puc_codes_str})"
+    url = f"{base_url}&$where=a_o='{anio}' AND mes='{mes_str}' AND {campo_cuenta} IN ({puc_codes_str})"
 
     max_retries = 20
     retry_delay = 2
@@ -288,9 +292,14 @@ def get_api_solidaria(anio, mes, cuenta_numeros, formatted_nits_dvs):
             response.raise_for_status()
             all_data = response.json()
             print(f"TOTALES Obtenidos {len(all_data)} registros de la API para el periodo {anio} y mes {mes} en el intento {attempt + 1}")
+            
             if all_data:
+
                 for result in all_data:
                     nit = result.get("nit")
+                    if nit not in formatted_nits_dvs_str:
+                        continue
+
                     cuenta = result.get(campo_cuenta)
                     valor_en_pesos = clean_currency_value_Decimal(result.get('valor_en_pesos', '0'))
                     saldos[nit][cuenta] += valor_en_pesos
@@ -517,7 +526,8 @@ class TotalAccounts(APIView):
                 if num in (0, 1, 3):
                     resultadoFinanciera = total_Financiera(anio, mes, num, cuentas_disponibles)
                     resultados.append(resultadoFinanciera)
-                elif num == 2:
+                # elif num == 2:
+                elif num in (2, 4, 5, 6):
                     resultadoSolidaria = total_solidaria(anio, mes, num, cuentas_disponibles)
                     resultados.append(resultadoSolidaria)
                 else:
