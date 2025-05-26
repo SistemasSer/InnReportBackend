@@ -351,7 +351,7 @@ class BalCoopApiViewIndicador(APIView):
         print(formatted_nits_dvs.__len__())
 
         # puc_codes_current = ["100000", "110000", "120000", "140000", "210000", "230000", "240000", "300000", "310000", "311010", "320000", "330500", "340500", "350000", "415000", "615005", "615010", "615015", "615020", "615035"] 
-        puc_codes_current = ["100000", "110000", "120000", "140000", "210000", "230000", "240000", "300000", "310000", "311010", "320000", "330500", "340500", "350000", "415000", "615005", "615010", "615015", "615020", "615035", "510500", "511000", "511018", "511048", "511020", "511021", "511022", "511038", "511040", "511042", "512000", "512500", "513000", "513500", "514000", "511500"]
+        puc_codes_current = ["100000", "110000", "120000", "140000", "150000", "160000", "170000", "180000", "190000", "210000", "230000", "240000", "300000", "310000", "311010", "320000", "330500", "340500", "350000", "415000", "615005", "615010", "615015", "615020", "615035", "510500", "511000", "511018", "511048", "511020", "511021", "511022", "511038", "511040", "511042", "512000", "512500", "513000", "513500", "514000", "511500"]
         puc_codes_prev = ["100000", "140000", "210000", "230000", "300000"]
         base_url, campo_cuenta = self.get_api_details(periodo)
         saldos_current = self.get_saldos(periodo, mes, campo_cuenta, puc_codes_current, base_url, formatted_nits_dvs)
@@ -473,78 +473,57 @@ class BalCoopApiViewIndicador(APIView):
     def calculate_indicators(self, formatted_nit_dv, razon_social, saldos_current, saldos_previous, mes_decimal):
 
         indicador_cartera = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "140000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
+
         indicador_deposito = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
         indicador_obligaciones = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "230000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
         indicador_cap_social = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "310000", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current)) 
         indicador_cap_inst = self.safe_division((get_saldo(formatted_nit_dv, razon_social, "311010", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "320000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "330500", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "340500", saldos_current)), get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
-
-        # denominator_roe = (get_saldo(formatted_nit_dv, razon_social, "300000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "300000", saldos_current) / mes_decimal) * 12) / 2
-        # denominator_roe = (get_saldo(formatted_nit_dv, razon_social, "300000", saldos_previous) + get_saldo(formatted_nit_dv, razon_social, "300000", saldos_current) / 2)
+        
         denominator_roe = self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "300000", saldos_previous, saldos_current)
-
         indicador_roe = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "350000", saldos_current), denominator_roe)
-        # denominator_roa = (get_saldo(formatted_nit_dv, razon_social, "100000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current) / mes_decimal) * 12) / 2
-        # denominator_roa = (get_saldo(formatted_nit_dv, razon_social, "100000", saldos_previous) + get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current) / 2)
-        denominator_roa = self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current)
 
+        denominator_roa = self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current)
         indicador_roa = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "350000", saldos_current), denominator_roa)
 
-        # denominator_ingreso_cartera = (get_saldo(formatted_nit_dv, razon_social, "140000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "140000", saldos_current) / mes_decimal) * 12) / 2
-        # denominator_ingreso_cartera = (get_saldo(formatted_nit_dv, razon_social, "140000", saldos_previous) + get_saldo(formatted_nit_dv, razon_social, "140000", saldos_current) / 2)
         denominator_ingreso_cartera = self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "140000", saldos_previous, saldos_current)
-
         indicador_ingreso_cartera = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "415000", saldos_current), denominator_ingreso_cartera)
 
-        # denominator_costos_deposito = (get_saldo(formatted_nit_dv, razon_social, "210000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current) / mes_decimal) * 12) / 2
-        # denominator_costos_deposito = (get_saldo(formatted_nit_dv, razon_social, "210000", saldos_previous) + get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current) / 2)
         denominator_costos_deposito = self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "210000", saldos_previous, saldos_current)
-
         indicador_costos_deposito = self.safe_division((get_saldo(formatted_nit_dv, razon_social, "615005", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "615010", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "615015", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "615020", saldos_current)), denominator_costos_deposito)
 
-        # denominator_credito_banco = (get_saldo(formatted_nit_dv, razon_social, "230000", saldos_previous) + (get_saldo(formatted_nit_dv, razon_social, "230000", saldos_current) / mes_decimal) * 12) / 2
-        # denominator_credito_banco = (get_saldo(formatted_nit_dv, razon_social, "230000", saldos_previous) + get_saldo(formatted_nit_dv, razon_social, "230000", saldos_current)/ 2)
         denominator_credito_banco = self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "230000", saldos_previous, saldos_current)
-
         indicador_credito_banco = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "615035", saldos_current), denominator_credito_banco)
-        indicador_disponible = self.safe_division((get_saldo(formatted_nit_dv, razon_social, "110000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "120000", saldos_current) - (get_saldo(formatted_nit_dv, razon_social, "240000", saldos_current) * 20 / 100)), get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+
+        # indicador_disponible = self.safe_division((get_saldo(formatted_nit_dv, razon_social, "110000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "120000", saldos_current) - (get_saldo(formatted_nit_dv, razon_social, "240000", saldos_current) * 20 / 100)), get_saldo(formatted_nit_dv, razon_social, "210000", saldos_current))
+        indicador_disponible = self.safe_division((get_saldo(formatted_nit_dv, razon_social, "110000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "120000", saldos_current)), get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
+        
+        cuentas_activosImp = (get_saldo(formatted_nit_dv, razon_social, "150000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "160000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "170000", saldos_current)  + get_saldo(formatted_nit_dv, razon_social, "180000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "190000", saldos_current) )
+        
+        # indicador_activos_imp = self.safe_division(cuentas_activosImp,self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current))
+        indicador_activos_imp = self.safe_division(cuentas_activosImp,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
 
         deteriodo_gastosOpetativos = self.safe_division(
             get_saldo(formatted_nit_dv, razon_social, "511500", saldos_current),
             self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current)
         )
-        # deteriodo_gastosOpetativos = self.safe_division(
-        #     get_saldo(formatted_nit_dv, razon_social, "511500", saldos_current),
-        #     get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current)
-        # )
 
         # Gastos Operativos
-        # indicador_personal = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "510500", saldos_current),get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
         indicador_personal = self.safe_division(get_saldo(formatted_nit_dv, razon_social, "510500", saldos_current),self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current))
 
         mercadeo_cuenta =get_saldo(formatted_nit_dv, razon_social, "511018", saldos_current)
-
-        # indicador_mercadeo = self.safe_division( mercadeo_cuenta ,self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current))
         indicador_mercadeo = self.safe_division( mercadeo_cuenta ,self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current))
 
         gobernabilidad_cuenta = get_saldo(formatted_nit_dv, razon_social, "511020", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "511021", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "511022", saldos_current)
-        # 
-        # indicador_gobernabilidad = self.safe_division( gobernabilidad_cuenta ,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
         indicador_gobernabilidad = self.safe_division( gobernabilidad_cuenta ,self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current))
-
-        # indicador_generalesGO = self.safe_division( get_saldo(formatted_nit_dv, razon_social, "511000", saldos_current) - mercadeo_cuenta - gobernabilidad_cuenta ,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
         indicador_generalesGO = self.safe_division( get_saldo(formatted_nit_dv, razon_social, "511000", saldos_current) - mercadeo_cuenta - gobernabilidad_cuenta ,self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current))
 
         depreAmorte_cuenta = (get_saldo(formatted_nit_dv, razon_social, "512000", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "512500", saldos_current))
 
-        # indicador_depreAmorti = self.safe_division( depreAmorte_cuenta ,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
         indicador_depreAmorti = self.safe_division( depreAmorte_cuenta ,self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current))
-        # 51200 -512500 
 
         totalGastosOperativos_cuentas = (get_saldo(formatted_nit_dv, razon_social, "510500", saldos_current) + get_saldo(formatted_nit_dv, razon_social, "511000", saldos_current) + mercadeo_cuenta + gobernabilidad_cuenta + depreAmorte_cuenta)
-        # indicador_totalGastosOperativos = self.safe_division( totalGastosOperativos_cuentas ,get_saldo(formatted_nit_dv, razon_social, "100000", saldos_current))
-        indicador_totalGastosOperativos = self.safe_division( totalGastosOperativos_cuentas ,self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current))
 
-        # totalgastos operativos = suma total de de las cuentasne pesos y dividirla entre los acivos (8 -12)
+        indicador_totalGastosOperativos = self.safe_division( totalGastosOperativos_cuentas ,self.get_promedio_saldo_cuenta(formatted_nit_dv, razon_social, "100000", saldos_previous, saldos_current))
 
         return {
             "indicadorCartera": indicador_cartera,
@@ -558,12 +537,11 @@ class BalCoopApiViewIndicador(APIView):
             "indicadorCostDeposito": indicador_costos_deposito,
             "indicadorCredBanco": indicador_credito_banco,
             "indicadorDisponible": indicador_disponible,
+            "indicadorActivoImpro": indicador_activos_imp,
             "DeterioroGastosOperativos": deteriodo_gastosOpetativos,
             # gastos opetativos
             "indicadorPersonal": indicador_personal,
-            # "indicadorAdministrativos": indicador_administrativos,
             "indicadorGenerales": indicador_generalesGO,
-            # "indicadorMercader": indicador_mercadeo,
             "indicadorMercadeo": indicador_mercadeo,
             "indicadorGobernabilidad": indicador_gobernabilidad,
             "indicadorDepreciacionesAmort": indicador_depreAmorti,

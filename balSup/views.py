@@ -246,7 +246,7 @@ class BalSupApiViewIndicador(APIView):
         mes_decimal = Decimal(mes)
         fecha1_str, fecha2_str = self.build_dates(periodo, mes)
         # puc_codes_current = ["100000", "110000", "120000", "130000", "140000", "210000", "240000", "250000", "300000", "310000", "320000", "370500", "391500", "410200", "510200", "510300"]
-        puc_codes_current = ["100000", "110000", "120000", "130000", "140000", "210000", "240000", "250000", "300000", "310000", "320000", "370500", "391500", "410200", "510200", "510300", "512000", "517240", "511800", "513025", "513030", "514500", "516000", "516500", "519005", "519010", "519020", "519025", "519030", "519035", "519040", "519045", "519065", "519070", "519095", "519015", "513010", "513015", "517500", "517800", "518000", "517005"]
+        puc_codes_current = ["100000", "110000", "120000", "130000", "140000", "150000", "160000", "170000", "180000", "190000", "210000", "240000", "250000", "300000", "310000", "320000", "370500", "391500", "410200", "510200", "510300", "512000", "517240", "511800", "513025", "513030", "514500", "516000", "516500", "519005", "519010", "519020", "519025", "519030", "519035", "519040", "519045", "519065", "519070", "519095", "519015", "513010", "513015", "517500", "517800", "518000", "517005"]
         puc_codes_prev = ["100000", "140000", "210000", "240000", "300000"]
         saldos_current = self.get_saldos(fecha1_str, fecha2_str, puc_codes_current)
         periodo_anterior_actual = periodo - 1
@@ -343,7 +343,7 @@ class BalSupApiViewIndicador(APIView):
 
     def calculate_indicators(self, razon_social, saldos_current, saldos_previous, mes_decimal):
         def safe_division(numerator, denominator):
-            # return (numerator / denominator * 100) if denominator else 0
+            # return (numerator / denominator * 100) if denominator else 
             return ( numerator / denominator ) if denominator else 0
 
         indicador_cartera = safe_division(saldos_current[razon_social]["140000"], saldos_current[razon_social]["100000"])
@@ -361,11 +361,17 @@ class BalSupApiViewIndicador(APIView):
         indicador_costos_deposito = safe_division(saldos_current[razon_social]["510200"], denominator_costos_deposito)
         denominator_credito_banco = (saldos_previous[razon_social]["240000"] + (saldos_current[razon_social]["240000"] / mes_decimal) * 12) / 2
         indicador_credito_banco = safe_division(saldos_current[razon_social]["510300"], denominator_credito_banco)
-        denominator_disponible = saldos_current[razon_social]["210000"]
-        indicador_disponible = safe_division(
-            (saldos_current[razon_social]["110000"] + saldos_current[razon_social]["120000"] + saldos_current[razon_social]["130000"] - (saldos_current[razon_social]["250000"] * 20 / 100)),
-            denominator_disponible
-        )
+        # denominator_disponible = saldos_current[razon_social]["210000"]
+        # indicador_disponible = safe_division(
+        #     (saldos_current[razon_social]["110000"] + saldos_current[razon_social]["120000"] + saldos_current[razon_social]["130000"] - (saldos_current[razon_social]["250000"] * 20 / 100)),
+        #     denominator_disponible
+        # )
+        indicador_disponible =safe_division((saldos_current[razon_social]["110000"]+saldos_current[razon_social]["120000"]),saldos_current[razon_social]["100000"])
+        
+        cuentas_activosImp = (saldos_current[razon_social]["150000"]+saldos_current[razon_social]["160000"]+saldos_current[razon_social]["170000"]+saldos_current[razon_social]["180000"]+saldos_current[razon_social]["190000"])
+        
+        indicador_activos_imp = safe_division(cuentas_activosImp, saldos_current[razon_social]["100000"])
+        
         # Gastos operativos
         indicador_personal = safe_division(saldos_current[razon_social]["512000"] + saldos_current[razon_social]["517240"], saldos_current[razon_social]["100000"])
         administrativos_cuentas = ( saldos_current[razon_social]["511800"] + saldos_current[razon_social]["513025"] + saldos_current[razon_social]["513030"] + saldos_current[razon_social]["514500"] + saldos_current[razon_social]["516000"] + saldos_current[razon_social]["516500"] + saldos_current[razon_social]["519005"] + saldos_current[razon_social]["519010"] + saldos_current[razon_social]["519020"] + saldos_current[razon_social]["519025"] + saldos_current[razon_social]["519030"] + saldos_current[razon_social]["519035"] + saldos_current[razon_social]["519040"] + saldos_current[razon_social]["519045"] + saldos_current[razon_social]["519065"] + saldos_current[razon_social]["519070"] + saldos_current[razon_social]["519095"])
@@ -391,6 +397,7 @@ class BalSupApiViewIndicador(APIView):
             "indicadorCostDeposito": indicador_costos_deposito,
             "indicadorCredBanco": indicador_credito_banco,
             "indicadorDisponible": indicador_disponible,
+            "indicadorActivoImpro": indicador_activos_imp,
             "DeterioroGastosOperativos": deteriodo_gastosOpetativos,
             # Gastos Operativos
             "indicadorPersonal": indicador_personal,
@@ -590,6 +597,8 @@ class BalSupApiViewIndicadorC(APIView):
         total_deterioro_ind = (consumo_deterioro + microcredito_deterioro + comercial_deterioro + vivienda_deterioro + empleados_deterioro)
         total_deterioro_gen = saldos_current[razon_social]["149800"]
         total_deterioro = (total_deterioro_ind + total_deterioro_gen)
+        
+        total_contable = (total_total - total_deterioro)
 
         denominator_total_ind_mora = (total_a + total_b + total_c + total_d + total_e)
         # total_ind_mora = (((total_b + total_c + total_d + total_e) / denominator_total_ind_mora) * 100 if denominator_total_ind_mora else 0)
@@ -746,6 +755,7 @@ class BalSupApiViewIndicadorC(APIView):
             "totalCastigos": total_castigos,
             "totalIndMora": total_ind_mora,
             "totalCartImpro": total_cart_impro,
+            "totalContable": total_contable,
 
             "totalDeterioroInd": total_deterioro_ind,
             "totalDeterioroGen": total_deterioro_gen,
