@@ -1,10 +1,12 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
+from rest_framework.exceptions import ValidationError
+from rest_framework.views import APIView
+
 from django.contrib.auth import authenticate, update_session_auth_hash
 from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ObjectDoesNotExist
-
 
 from core.user.serializers import UserSerializer
 from core.user.models import User
@@ -26,10 +28,11 @@ class LoginSerializer(TokenObtainPairSerializer):
 
         return data
 
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(max_length=128, min_length=8, write_only=True, required=True)
     email = serializers.EmailField(required=True, write_only=True, max_length=128)
-    is_staff = serializers.BooleanField(required=False, default=False)  # Añadir is_staff
+    is_staff = serializers.BooleanField(required=False, default=False)
 
     class Meta:
         model = User
@@ -40,36 +43,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
-# class RegisterSerializer(UserSerializer):
-#     password = serializers.CharField(max_length=128, min_length=8, write_only=True, required=True)
-#     email = serializers.EmailField(required=True, write_only=True, max_length=128)
-
-#     class Meta:
-#         model = User
-#         fields = ['id', 'username', 'email', 'password', 'is_staff', 'is_active', 'created_at', 'updated_at']
-
-#     def create(self, validated_data):
-#         try:
-#             user = User.objects.get(email=validated_data['email'])
-#         except ObjectDoesNotExist:
-#             user = User.objects.create_user(**validated_data)
-#         return user
-    
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'is_staff', 'is_active', 'created_at', 'updated_at']  # Incluye los campos que deseas permitir actualizar
-    
-class UserUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['username', 'email']
-    
-    def update(self, instance, validated_data):
-        instance.username = validated_data.get('username', instance.username)
-        instance.email = validated_data.get('email', instance.email)
-        instance.save()
-        return instance
+        fields = ['id', 'username', 'email', 'is_staff', 'is_active', 'created_at', 'updated_at']
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
@@ -79,12 +56,10 @@ class ChangePasswordSerializer(serializers.Serializer):
         old_password = data.get('old_password')
         new_password = data.get('new_password')
 
-        # Check if old password is correct
         user = authenticate(username=self.context['request'].user.username, password=old_password)
         if not user:
             raise serializers.ValidationError({"old_password": "Old password is incorrect."})
 
-        # Ensure new password is not the same as old password (optional)
         if old_password == new_password:
             raise serializers.ValidationError({"new_password": "New password must be different from the old password."})
 
@@ -95,3 +70,15 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data['new_password'])
         user.save()
         update_session_auth_hash(self.context['request'], user)
+
+class UserSerializerUpdate(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'is_staff', 'is_active']
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class PasswordResetSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)

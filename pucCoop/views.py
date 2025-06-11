@@ -12,10 +12,11 @@ from pucCoop.serializers import PucCoppSerializer
 
 class PucCoopApiView(APIView):
     def get(self, request):
-        serializer = PucCoppSerializer(PucCoopModel.objects.all(), many=True)
+        queryset = PucCoopModel.objects.all().order_by('Codigo')
+        serializer = PucCoppSerializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
+    
     def post(self, request): 
-        #res = request.data.get('name')  
         serializer = PucCoppSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
