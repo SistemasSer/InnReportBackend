@@ -361,17 +361,13 @@ class BalSupApiViewIndicador(APIView):
         indicador_costos_deposito = safe_division(saldos_current[razon_social]["510200"], denominator_costos_deposito)
         denominator_credito_banco = (saldos_previous[razon_social]["240000"] + (saldos_current[razon_social]["240000"] / mes_decimal) * 12) / 2
         indicador_credito_banco = safe_division(saldos_current[razon_social]["510300"], denominator_credito_banco)
-        # denominator_disponible = saldos_current[razon_social]["210000"]
-        # indicador_disponible = safe_division(
-        #     (saldos_current[razon_social]["110000"] + saldos_current[razon_social]["120000"] + saldos_current[razon_social]["130000"] - (saldos_current[razon_social]["250000"] * 20 / 100)),
-        #     denominator_disponible
-        # )
+
         indicador_disponible =safe_division((saldos_current[razon_social]["110000"]+saldos_current[razon_social]["120000"]),saldos_current[razon_social]["100000"])
         
         cuentas_activosImp = (saldos_current[razon_social]["150000"]+saldos_current[razon_social]["160000"]+saldos_current[razon_social]["170000"]+saldos_current[razon_social]["180000"]+saldos_current[razon_social]["190000"])
         
         indicador_activos_imp = safe_division(cuentas_activosImp, saldos_current[razon_social]["100000"])
-        
+
         # Gastos operativos
         indicador_personal = safe_division(saldos_current[razon_social]["512000"] + saldos_current[razon_social]["517240"], saldos_current[razon_social]["100000"])
         administrativos_cuentas = ( saldos_current[razon_social]["511800"] + saldos_current[razon_social]["513025"] + saldos_current[razon_social]["513030"] + saldos_current[razon_social]["514500"] + saldos_current[razon_social]["516000"] + saldos_current[razon_social]["516500"] + saldos_current[razon_social]["519005"] + saldos_current[razon_social]["519010"] + saldos_current[razon_social]["519020"] + saldos_current[razon_social]["519025"] + saldos_current[razon_social]["519030"] + saldos_current[razon_social]["519035"] + saldos_current[razon_social]["519040"] + saldos_current[razon_social]["519045"] + saldos_current[razon_social]["519065"] + saldos_current[razon_social]["519070"] + saldos_current[razon_social]["519095"])
