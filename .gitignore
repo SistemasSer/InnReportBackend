@@ -9,7 +9,7 @@ virtual_env/
 
 # Django
 media/archivo/*
-!/media/archivo/ 
+!media/archivo/.gitkeep
 staticfiles/
 debug.log
 
