@@ -1,0 +1,18 @@
+# Bytecode de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+virtual_env/
+.env
+
+# Django
+media/archivo/*
+!/media/archivo/ 
+staticfiles/
+debug.log
+
+# IDE/Editores
+.vscode/
+.idea/
