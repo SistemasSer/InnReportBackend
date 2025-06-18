@@ -2,6 +2,9 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
+import pymysql
+pymysql.install_as_MySQLdb()
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -90,10 +93,12 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # STATIC_ROOT = os.path.join(BASE_DIR, 'static-storage')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 CORS_ALLOW_METHODS = [
     'GET',
@@ -133,6 +138,8 @@ CORS_ALLOW_CREDENTIALS = True
 
 # SESSION_COOKIE_DOMAIN = ".innreport.com.co" 
 # CSRF_COOKIE_DOMAIN = ".innreport.com.co"
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 AUTH_USER_MODEL = 'core_user.User'
 

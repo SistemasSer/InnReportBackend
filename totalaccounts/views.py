@@ -478,6 +478,7 @@ class TotalAccounts(APIView):
     def post(self, request, *args, **kwargs):
         data = request.data
         resultados_totales = []
+        print(f"Comienzo de el View 'TotalAccounts' prueba reload")
 
         bloques = self.dividir_en_bloques(data)
 

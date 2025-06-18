@@ -13,6 +13,9 @@ media/archivo/*
 staticfiles/
 debug.log
 
+# Archivos estáticos generados
+/static/
+
 # IDE/Editores
 .vscode/
 .idea/
