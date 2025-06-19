@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework.routers import SimpleRouter
 from core.user.viewsets import UserViewSet
 from core.auth.viewsets import (
@@ -53,3 +53,5 @@ routes.register(r"user", UserViewSet, basename="user")
 
 # urlpatterns = [*routes.urls]
 urlpatterns += routes.urls
+
+# Slider url

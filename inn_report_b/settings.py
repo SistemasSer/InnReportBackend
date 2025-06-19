@@ -14,6 +14,10 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 #AllowedHost
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 
+#SliderData key
+EXCHANGE_API_KEY = os.getenv("EXCHANGE_API_KEY", "af53050d331091f93c6ae86a00a7df0f")
+
+
 #media
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')    
@@ -38,7 +42,8 @@ INSTALLED_APPS = [
     'pucSup',
     'balCoop',
     'balSup',
-    'Resumen'
+    'Resumen',
+     "sliderData",
 ]
 
 MIDDLEWARE = [
