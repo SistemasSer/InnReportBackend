@@ -13,8 +13,8 @@ from core.auth.viewsets import (
     CreateSubscriptionView,
     ExtendSubscriptionView,
     CancelSubscriptionView,
-    ActiveSessionsView,
-    CheckSessionView,
+    # ActiveSessionsView,
+    # CheckSessionView,
     EntidadesUser
 )
 
@@ -41,8 +41,8 @@ urlpatterns = [
     path(r'extend_subscription', ExtendSubscriptionView.as_view(), name='extend-subscription'),
     path(r'cancel_subscription', CancelSubscriptionView.as_view(), name='cancel-subscription'),
 
-    path(r'active-sessions/', ActiveSessionsView.as_view(), name='active-sessions'),
-    path(r'check-session/', CheckSessionView.as_view(), name='check-session'),
+    # path(r'active-sessions/', ActiveSessionsView.as_view(), name='active-sessions'),
+    # path(r'check-session/', CheckSessionView.as_view(), name='check-session'),
 
     path(r'user-entity/<int:user_id>/', EntidadesUser.as_view(), name='user-entity'),
 ]

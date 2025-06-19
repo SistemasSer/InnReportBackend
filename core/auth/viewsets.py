@@ -33,9 +33,63 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils.timezone import now
 from django.contrib.auth import login, logout
 
-class LoginViewSet(ModelViewSet, TokenObtainPairView):
-    serializer_class = LoginSerializer
+from rest_framework.viewsets import ViewSet
+
+from django.contrib.auth import get_user_model
+
+# class LoginViewSet(ModelViewSet, TokenObtainPairView):
+#     serializer_class = LoginSerializer
+#     permission_classes = (AllowAny,)
+#     http_method_names = ["post"]
+
+#     def create(self, request, *args, **kwargs):
+#         email = request.data.get("email")
+#         password = request.data.get("password")
+
+#         user = User.objects.filter(email=email).first()
+#         if not user:
+#             return Response({"detail": "El email no está registrado."}, status=status.HTTP_400_BAD_REQUEST)
+
+#         if User.objects.filter(email=email, is_active=False).first():
+#             return Response({"detail": "La Cuenta se encuentra Inhabilitada"}, status=status.HTTP_403_FORBIDDEN)
+
+#         if not user.check_password(password):
+#             return Response({"detail": "La contraseña es incorrecta."}, status=status.HTTP_400_BAD_REQUEST)
+
+#         serializer = self.get_serializer(data=request.data)
+#         try:
+#             serializer.is_valid(raise_exception=True)
+#         except TokenError:
+#             return Response({"detail": "Error al generar el token."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+#         # Cerrar sesiones anteriores del usuario
+#         active_sessions = Session.objects.filter(expire_date__gte=now())
+#         user_sessions = [session for session in active_sessions if session.get_decoded().get('_auth_user_id') == str(user.id)]
+#         for session in user_sessions:
+#             session.delete()
+
+#         serializer = self.get_serializer(data=request.data)
+#         try:
+#             serializer.is_valid(raise_exception=True)
+#         except TokenError:
+#             return Response({"detail": "Error al generar el token."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#         # Iniciar sesión del usuario
+#         login(request, user)
+
+#         data = serializer.validated_data
+#         data["detail"] = "Inicio de sesión exitoso."
+#         data["session_key"] = request.session.session_key
+#         return Response(data, status=status.HTTP_200_OK)
+
+
+
+User = get_user_model()
+
+class LoginViewSet(ViewSet, TokenObtainPairView):
+    # permission_classes = [AllowAny]
     permission_classes = (AllowAny,)
+    serializer_class = LoginSerializer
     http_method_names = ["post"]
 
     def create(self, request, *args, **kwargs):
@@ -46,8 +100,8 @@ class LoginViewSet(ModelViewSet, TokenObtainPairView):
         if not user:
             return Response({"detail": "El email no está registrado."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if User.objects.filter(email=email, is_active=False).first():
-            return Response({"detail": "La Cuenta se encuentra Inhabilitada"}, status=status.HTTP_403_FORBIDDEN)
+        if not user.is_active:
+            return Response({"detail": "La cuenta se encuentra inhabilitada."}, status=status.HTTP_403_FORBIDDEN)
 
         if not user.check_password(password):
             return Response({"detail": "La contraseña es incorrecta."}, status=status.HTTP_400_BAD_REQUEST)
@@ -55,28 +109,24 @@ class LoginViewSet(ModelViewSet, TokenObtainPairView):
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-        except TokenError:
-            return Response({"detail": "Error al generar el token."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        # Cerrar sesiones anteriores del usuario
-        active_sessions = Session.objects.filter(expire_date__gte=now())
-        user_sessions = [session for session in active_sessions if session.get_decoded().get('_auth_user_id') == str(user.id)]
-        for session in user_sessions:
-            session.delete()
-
-        serializer = self.get_serializer(data=request.data)
-        try:
-            serializer.is_valid(raise_exception=True)
-        except TokenError:
+        except TokenError as e:
             return Response({"detail": "Error al generar el token."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Iniciar sesión del usuario
-        login(request, user)
+        token_data = serializer.validated_data
+        response_data = {
+            "access": token_data.get("access"),
+            "refresh": token_data.get("refresh"),
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "is_staff": user.is_staff,
+                "is_active": user.is_active,
+            },
+            "detail": "Inicio de sesión exitoso."
+        }
 
-        data = serializer.validated_data
-        data["detail"] = "Inicio de sesión exitoso."
-        data["session_key"] = request.session.session_key
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK)
 
 class RegistrationViewSet(ModelViewSet):
     serializer_class = RegisterSerializer
@@ -157,16 +207,34 @@ class RegistrationViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+# class RefreshViewSet(viewsets.ViewSet, TokenRefreshView):
+#     permission_classes = (AllowAny,)
+#     http_method_names = ["post"]
+#     def create(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(data=request.data)
+#         try:
+#             serializer.is_valid(raise_exception=True)
+#         except TokenError as e:
+#             raise InvalidToken(e.args[0])
+#         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
 class RefreshViewSet(viewsets.ViewSet, TokenRefreshView):
+    
     permission_classes = (AllowAny,)
     http_method_names = ["post"]
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        refresh_token = request.data.get("refresh") or request.COOKIES.get("refresh")
+        serializer = self.get_serializer(data={"refresh": refresh_token})
+
         try:
             serializer.is_valid(raise_exception=True)
         except TokenError as e:
             raise InvalidToken(e.args[0])
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+        return Response({
+            "access": serializer.validated_data["access"],
+            "detail": "Token actualizado correctamente."
+        }, status=status.HTTP_200_OK)
 
 class UserUpdateViewSet(viewsets.ViewSet):
     permission_classes = (AllowAny,)
@@ -491,35 +559,35 @@ class CancelSubscriptionView(APIView):
 
 #temporal
 
-class ActiveSessionsView(APIView):
-    permission_classes = [AllowAny]
+# class ActiveSessionsView(APIView):
+#     permission_classes = [AllowAny]
 
-    def get(self, request, *args, **kwargs):
-        sessions = Session.objects.filter(expire_date__gte=now())
-        active_sessions = []
+#     def get(self, request, *args, **kwargs):
+#         sessions = Session.objects.filter(expire_date__gte=now())
+#         active_sessions = []
 
-        for session in sessions:
-            data = session.get_decoded()
-            user_id = data.get('_auth_user_id')
-            if user_id:
-                try:
-                    user = User.objects.get(id=user_id)
-                    active_sessions.append({
-                        'session_key': session.session_key,
-                        'user_id': user.id,
-                        'username': user.username,
-                        'last_activity': session.expire_date,
-                    })
-                except User.DoesNotExist:
-                    continue
+#         for session in sessions:
+#             data = session.get_decoded()
+#             user_id = data.get('_auth_user_id')
+#             if user_id:
+#                 try:
+#                     user = User.objects.get(id=user_id)
+#                     active_sessions.append({
+#                         'session_key': session.session_key,
+#                         'user_id': user.id,
+#                         'username': user.username,
+#                         'last_activity': session.expire_date,
+#                     })
+#                 except User.DoesNotExist:
+#                     continue
 
-        return Response(active_sessions)
+#         return Response(active_sessions)
 
-class CheckSessionView(APIView):
-    permission_classes = [IsAuthenticated]
+# class CheckSessionView(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def get(self, request, *args, **kwargs):
-        return Response({"session_key": request.session.session_key})
+#     def get(self, request, *args, **kwargs):
+#         return Response({"session_key": request.session.session_key})
 
 # userEntidad
 
