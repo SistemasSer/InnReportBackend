@@ -18,11 +18,17 @@ class Command(BaseCommand):
         try:
             # === TRM oficial de Colombia desde datos.gov.co ===
             trm_url = "https://www.datos.gov.co/resource/32sa-8pi3.json"
-            trm_today = requests.get(trm_url, params={"vigenciadesde": today_str}).json()
-            trm_yesterday = requests.get(trm_url, params={"vigenciadesde": yesterday_str}).json()
+            trm_today_resp = requests.get(trm_url, params={"vigenciadesde": today_str}).json()
+            trm_yesterday_resp = requests.get(trm_url, params={"vigenciadesde": yesterday_str}).json()
 
-            trm_data_today = trm_today[0] if trm_today else {}
-            trm_data_yesterday = trm_yesterday[0] if trm_yesterday else {}
+            trm_data_today = trm_today_resp[0] if trm_today_resp else {}
+            trm_data_yesterday = trm_yesterday_resp[0] if trm_yesterday_resp else {}
+
+            # Fallback: usar TRM de ayer si la de hoy está vacía pero sigue vigente
+            if not trm_data_today and trm_data_yesterday:
+                vigencia_hasta = trm_data_yesterday.get("vigenciahasta", "")
+                if vigencia_hasta.startswith(today_str):
+                    trm_data_today = trm_data_yesterday
 
             trm_today_value = float(trm_data_today.get("valor", 0))
             trm_yesterday_value = float(trm_data_yesterday.get("valor", 0))
@@ -50,16 +56,20 @@ class Command(BaseCommand):
             rates_today = {}
             for code in relevant_currencies:
                 usd_to_curr = quotes.get(f"USD{code}")
-                if usd_to_curr:
+                if usd_to_curr and trm_today_value:
                     cop_value = convert_usd_to_cop(1 / usd_to_curr, trm_today_value)
                     rates_today[code] = cop_value
+                else:
+                    rates_today[code] = 0
 
             rates_yesterday = {}
             for code in relevant_currencies:
                 usd_to_curr = quotes.get(f"USD{code}")
-                if usd_to_curr:
+                if usd_to_curr and trm_yesterday_value:
                     cop_value = convert_usd_to_cop(1 / usd_to_curr, trm_yesterday_value)
                     rates_yesterday[code] = cop_value
+                else:
+                    rates_yesterday[code] = 0
 
             # === Estructura final ===
             slider_data = {
@@ -83,7 +93,7 @@ class Command(BaseCommand):
                 }
             }
 
-            # === Guardar JSON
+            # === Guardar JSON ===
             output_path = os.path.join(settings.BASE_DIR, "sliderData", "data", "slider_data.json")
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 

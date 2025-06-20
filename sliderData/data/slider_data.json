@@ -1,6 +1,6 @@
 {
   "data_slider_today": {
-    "current_datetime": "2025-06-19",
+    "current_datetime": "2025-06-20",
     "current_TRM": {
       "valor": "4076.32",
       "unidad": "COP",
@@ -11,49 +11,49 @@
       "base": "COP",
       "converted_from_usd": true,
       "rates": {
-        "EUR": 4686.1,
-        "GBP": 5489.85,
-        "JPY": 28.01,
-        "CHF": 4990.75,
-        "MXN": 214.12,
-        "BRL": 742.36,
+        "EUR": 4687.31,
+        "GBP": 5487.19,
+        "JPY": 27.95,
+        "CHF": 4984.53,
+        "MXN": 213.38,
+        "BRL": 741.32,
         "CLP": 4.33,
-        "PEN": 1133.41,
+        "PEN": 1134.52,
         "ARS": 3.5,
-        "UYU": 99.73,
-        "BOB": 588.31,
+        "UYU": 99.64,
+        "BOB": 589.6,
         "PYG": 0.51,
         "VES": 39.75,
-        "DOP": 68.68
+        "DOP": 68.7
       }
     }
   },
   "data_slider_yesterday": {
-    "yesterday_datetime": "2025-06-18",
+    "yesterday_datetime": "2025-06-19",
     "yesterday_TRM": {
-      "valor": "4098.83",
+      "valor": "4076.32",
       "unidad": "COP",
-      "vigenciadesde": "2025-06-18T00:00:00.000",
-      "vigenciahasta": "2025-06-18T00:00:00.000"
+      "vigenciadesde": "2025-06-19T00:00:00.000",
+      "vigenciahasta": "2025-06-20T00:00:00.000"
     },
     "external_data_yesterday": {
       "base": "COP",
       "converted_from_usd": true,
       "rates": {
-        "EUR": 4711.98,
-        "GBP": 5520.16,
-        "JPY": 28.16,
-        "CHF": 5018.31,
-        "MXN": 215.3,
-        "BRL": 746.46,
-        "CLP": 4.36,
-        "PEN": 1139.67,
-        "ARS": 3.52,
-        "UYU": 100.28,
-        "BOB": 591.56,
+        "EUR": 4687.31,
+        "GBP": 5487.19,
+        "JPY": 27.95,
+        "CHF": 4984.53,
+        "MXN": 213.38,
+        "BRL": 741.32,
+        "CLP": 4.33,
+        "PEN": 1134.52,
+        "ARS": 3.5,
+        "UYU": 99.64,
+        "BOB": 589.6,
         "PYG": 0.51,
-        "VES": 39.97,
-        "DOP": 69.06
+        "VES": 39.75,
+        "DOP": 68.7
       }
     }
   }
