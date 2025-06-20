@@ -1,5 +1,7 @@
 import logging
 import requests
+import httpx
+import time
 from django.db.models import Case, When, IntegerField, DecimalField, Value, Subquery, OuterRef
 from django.db.models.functions import Coalesce
 from decimal import Decimal, InvalidOperation
@@ -16,29 +18,49 @@ from entidad.serializers import EntidadSerializer
 
 logger = logging.getLogger('django')
 
-# def determinar_grupo(saldo):
-#     if saldo < 10000000000:
-#         return 1
-#     elif saldo <= 50000000000:
-#         return 2
-#     elif saldo <= 200000000000:
-#         return 3
-#     elif saldo <= 500000000000:
-#         return 4
-#     else:
-#         return 5
+# Variable global para almacenar el valor y el tiempo de última actualización
+_cache_valor_uvr = None
+_cache_tiempo = 0
+TIEMPO_CACHE_SEGUNDOS = 60
 
 def determinar_grupo(saldo):
-    uvr = 388
-    # basico
-    if saldo < (315000000 * uvr):
-        return 1
-    # intermedia
-    elif saldo <= (1400000000 * uvr):
-        return 2
-    # plena
+    global _cache_valor_uvr, _cache_tiempo
+
+    # Si el valor está en caché y aún no vence, lo usamos
+    if _cache_valor_uvr is not None and (time.time() - _cache_tiempo) < TIEMPO_CACHE_SEGUNDOS:
+        valor_uvr = _cache_valor_uvr
+        print("Usando valor desde caché:", valor_uvr)
     else:
-        return 3
+        # URL de la API
+        url = "https://suameca.banrep.gov.co/estadisticas-economicas-back/rest/estadisticaEconomicaRestService/consultaMenuXId?idMenu=100005"
+
+        try:
+            # Realizar la petición GET 
+            response = httpx.get(url, timeout=10.0)
+
+            # Verificar si la petición fue exitosa
+            if response.status_code == 200:
+                data = response.json()
+                valor_uvr = data['SERIES'][0]['valor']
+                # Actualizar el caché
+                _cache_valor_uvr = valor_uvr
+                _cache_tiempo = time.time()
+                print("Datos recibidos desde API:", valor_uvr)
+            else:
+                print(f"Error en la API: {response.status_code}")
+                print(response.text)
+                # Usar un valor por defecto o manejar el error
+                valor_uvr = 388  # Valor predeterminado o anterior
+        except Exception as e:
+            print(f"Excepción al hacer la petición: {e}")
+            valor_uvr = 388  # Valor predeterminado en caso de fallo
+    # Aplicar lógica según el saldo
+    if saldo < (315000000 * valor_uvr):
+        return 1  # Básico
+    elif saldo <= (1400000000 * valor_uvr):
+        return 2  # Intermedio
+    else:
+        return 3  # Plena
 
 def format_nit_dv(nit, dv):
     nit_str = str(nit).zfill(9)
