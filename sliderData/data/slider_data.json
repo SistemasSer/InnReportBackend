@@ -1,35 +1,35 @@
 {
   "data_slider_today": {
-    "current_datetime": "2025-06-20",
+    "current_datetime": "2025-06-21",
     "current_TRM": {
-      "valor": "4076.32",
+      "valor": "4080.06",
       "unidad": "COP",
-      "vigenciadesde": "2025-06-19T00:00:00.000",
-      "vigenciahasta": "2025-06-20T00:00:00.000"
+      "vigenciadesde": "2025-06-21T00:00:00.000",
+      "vigenciahasta": "2025-06-24T00:00:00.000"
     },
     "external_data_today": {
       "base": "COP",
       "converted_from_usd": true,
       "rates": {
-        "EUR": 4687.31,
-        "GBP": 5487.19,
-        "JPY": 27.95,
-        "CHF": 4984.53,
-        "MXN": 213.38,
-        "BRL": 741.32,
-        "CLP": 4.33,
-        "PEN": 1134.52,
+        "EUR": 4702.13,
+        "GBP": 5490.13,
+        "JPY": 27.93,
+        "CHF": 4988.31,
+        "MXN": 212.65,
+        "BRL": 740.07,
+        "CLP": 4.34,
+        "PEN": 1136.53,
         "ARS": 3.5,
-        "UYU": 99.64,
-        "BOB": 589.6,
+        "UYU": 99.82,
+        "BOB": 590.64,
         "PYG": 0.51,
-        "VES": 39.75,
-        "DOP": 68.7
+        "VES": 39.78,
+        "DOP": 68.82
       }
     }
   },
   "data_slider_yesterday": {
-    "yesterday_datetime": "2025-06-19",
+    "yesterday_datetime": "2025-06-20",
     "yesterday_TRM": {
       "valor": "4076.32",
       "unidad": "COP",
@@ -40,21 +40,57 @@
       "base": "COP",
       "converted_from_usd": true,
       "rates": {
-        "EUR": 4687.31,
-        "GBP": 5487.19,
-        "JPY": 27.95,
-        "CHF": 4984.53,
-        "MXN": 213.38,
-        "BRL": 741.32,
+        "EUR": 4697.82,
+        "GBP": 5485.1,
+        "JPY": 27.9,
+        "CHF": 4983.73,
+        "MXN": 212.46,
+        "BRL": 739.39,
         "CLP": 4.33,
-        "PEN": 1134.52,
+        "PEN": 1135.49,
         "ARS": 3.5,
-        "UYU": 99.64,
-        "BOB": 589.6,
+        "UYU": 99.72,
+        "BOB": 590.1,
         "PYG": 0.51,
         "VES": 39.75,
-        "DOP": 68.7
+        "DOP": 68.76
       }
+    }
+  },
+  "calculated_differences": {
+    "calculated_percent": {
+      "EUR": "0.09%",
+      "GBP": "0.09%",
+      "JPY": "0.11%",
+      "CHF": "0.09%",
+      "MXN": "0.09%",
+      "BRL": "0.09%",
+      "CLP": "0.23%",
+      "PEN": "0.09%",
+      "ARS": "0.0%",
+      "UYU": "0.1%",
+      "BOB": "0.09%",
+      "PYG": "0.0%",
+      "VES": "0.08%",
+      "DOP": "0.09%",
+      "USD": "0.09%"
+    },
+    "calculated_difference": {
+      "EUR": 4.31,
+      "GBP": 5.03,
+      "JPY": 0.03,
+      "CHF": 4.58,
+      "MXN": 0.19,
+      "BRL": 0.68,
+      "CLP": 0.01,
+      "PEN": 1.04,
+      "ARS": 0.0,
+      "UYU": 0.1,
+      "BOB": 0.54,
+      "PYG": 0.0,
+      "VES": 0.03,
+      "DOP": 0.06,
+      "USD": 3.74
     }
   }
 }

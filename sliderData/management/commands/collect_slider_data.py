@@ -16,15 +16,14 @@ class Command(BaseCommand):
         yesterday_str = yesterday.isoformat()
 
         try:
-            # === TRM oficial de Colombia desde datos.gov.co ===
+            # === TRM desde datos.gov.co ===
             trm_url = "https://www.datos.gov.co/resource/32sa-8pi3.json"
             trm_today_resp = requests.get(trm_url, params={"vigenciadesde": today_str}).json()
-            trm_yesterday_resp = requests.get(trm_url, params={"vigenciadesde": yesterday_str}).json()
+            trm_yesterday_resp = requests.get(trm_url, params={"vigenciahasta": yesterday_str}).json()
 
             trm_data_today = trm_today_resp[0] if trm_today_resp else {}
             trm_data_yesterday = trm_yesterday_resp[0] if trm_yesterday_resp else {}
 
-            # Fallback: usar TRM de ayer si la de hoy está vacía pero sigue vigente
             if not trm_data_today and trm_data_yesterday:
                 vigencia_hasta = trm_data_yesterday.get("vigenciahasta", "")
                 if vigencia_hasta.startswith(today_str):
@@ -33,7 +32,7 @@ class Command(BaseCommand):
             trm_today_value = float(trm_data_today.get("valor", 0))
             trm_yesterday_value = float(trm_data_yesterday.get("valor", 0))
 
-            # === API de currencylayer via exchangerate.host (endpoint /live) ===
+            # === API externa ===
             access_key = settings.EXCHANGE_API_KEY
             url = f"https://api.exchangerate.host/live?access_key={access_key}"
 
@@ -45,7 +44,6 @@ class Command(BaseCommand):
 
             quotes = data["quotes"]
 
-            # === Monedas relevantes ===
             global_currencies = ["EUR", "GBP", "JPY", "CHF"]
             regional_currencies = ["MXN", "BRL", "CLP", "PEN", "ARS", "UYU", "BOB", "PYG", "VES", "DOP"]
             relevant_currencies = global_currencies + regional_currencies
@@ -54,22 +52,38 @@ class Command(BaseCommand):
                 return round(usd_value * usd_to_cop, 2)
 
             rates_today = {}
+            rates_yesterday = {}
+            percent_diff = {}
+            abs_diff = {}
+
             for code in relevant_currencies:
                 usd_to_curr = quotes.get(f"USD{code}")
-                if usd_to_curr and trm_today_value:
-                    cop_value = convert_usd_to_cop(1 / usd_to_curr, trm_today_value)
-                    rates_today[code] = cop_value
+                if usd_to_curr:
+                    today_rate = convert_usd_to_cop(1 / usd_to_curr, trm_today_value)
+                    yesterday_rate = convert_usd_to_cop(1 / usd_to_curr, trm_yesterday_value)
+
+                    rates_today[code] = today_rate
+                    rates_yesterday[code] = yesterday_rate
+
+                    abs_diff[code] = round(today_rate - yesterday_rate, 2)
+                    if yesterday_rate != 0:
+                        percent = ((today_rate - yesterday_rate) / yesterday_rate) * 100
+                        percent_diff[code] = f"{round(percent, 2)}%"
+                    else:
+                        percent_diff[code] = "0.0%"
                 else:
                     rates_today[code] = 0
-
-            rates_yesterday = {}
-            for code in relevant_currencies:
-                usd_to_curr = quotes.get(f"USD{code}")
-                if usd_to_curr and trm_yesterday_value:
-                    cop_value = convert_usd_to_cop(1 / usd_to_curr, trm_yesterday_value)
-                    rates_yesterday[code] = cop_value
-                else:
                     rates_yesterday[code] = 0
+                    abs_diff[code] = 0
+                    percent_diff[code] = "0.0%"
+
+            # TRM también
+            abs_diff["USD"] = round(trm_today_value - trm_yesterday_value, 2)
+            if trm_yesterday_value:
+                percent = ((trm_today_value - trm_yesterday_value) / trm_yesterday_value) * 100
+                percent_diff["USD"] = f"{round(percent, 2)}%"
+            else:
+                percent_diff["USD"] = "0.0%"
 
             # === Estructura final ===
             slider_data = {
@@ -79,7 +93,7 @@ class Command(BaseCommand):
                     "external_data_today": {
                         "base": "COP",
                         "converted_from_usd": True,
-                        "rates": rates_today
+                        "rates": rates_today,
                     }
                 },
                 "data_slider_yesterday": {
@@ -88,12 +102,15 @@ class Command(BaseCommand):
                     "external_data_yesterday": {
                         "base": "COP",
                         "converted_from_usd": True,
-                        "rates": rates_yesterday
+                        "rates": rates_yesterday,
                     }
+                },
+                "calculated_differences": {
+                    "calculated_percent": percent_diff,
+                    "calculated_difference": abs_diff,
                 }
             }
 
-            # === Guardar JSON ===
             output_path = os.path.join(settings.BASE_DIR, "sliderData", "data", "slider_data.json")
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
