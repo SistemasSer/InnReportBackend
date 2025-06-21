@@ -50,10 +50,10 @@ def determinar_grupo(saldo):
                 print(f"Error en la API: {response.status_code}")
                 print(response.text)
                 # Usar un valor por defecto o manejar el error
-                valor_uvr = 388  # Valor predeterminado o anterior
+                valor_uvr = 392  # Valor predeterminado o anterior
         except Exception as e:
             print(f"Excepción al hacer la petición: {e}")
-            valor_uvr = 388  # Valor predeterminado en caso de fallo
+            valor_uvr = 392  # Valor predeterminado en caso de fallo
     # Aplicar lógica según el saldo
     if saldo < (315000000 * valor_uvr):
         return 1  # Básico
