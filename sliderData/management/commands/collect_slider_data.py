@@ -5,37 +5,62 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
+
 class Command(BaseCommand):
     help = "Recolecta datos de tasas de cambio y guarda un JSON para el carrusel"
 
+    def get_trm_data_for_day(self, target_date: date) -> dict:
+        """
+        Intenta obtener la TRM usando primero `vigenciadesde`, si no existe, intenta con `vigenciahasta`.
+        """
+        trm_url = "https://www.datos.gov.co/resource/32sa-8pi3.json"
+        day_str = target_date.isoformat()
+
+        # 1. Buscar por vigenciadesde
+        response = requests.get(trm_url, params={"vigenciadesde": day_str}).json()
+        if response:
+            return response[0]
+
+        # 2. Fallback por vigenciahasta (caso festivo)
+        response_fallback = requests.get(trm_url, params={"vigenciahasta": day_str}).json()
+        if response_fallback:
+            return response_fallback[0]
+
+        return {}
+
+    def find_previous_trm(self, today: date, trm_today: dict, max_days_back=7) -> tuple[date, dict]:
+        """
+        Busca la TRM más reciente anterior a la actual (no igual), retrocediendo hasta `max_days_back` días.
+        """
+        for i in range(1, max_days_back + 1):
+            prev_date = today - timedelta(days=i)
+            trm_prev = self.get_trm_data_for_day(prev_date)
+
+            if not trm_prev:
+                continue
+
+            if trm_prev.get("valor") != trm_today.get("valor"):
+                return prev_date, trm_prev
+
+        return today - timedelta(days=1), {}
+
     def handle(self, *args, **kwargs):
         today = date.today()
-        yesterday = today - timedelta(days=1)
-
         today_str = today.isoformat()
-        yesterday_str = yesterday.isoformat()
 
         try:
-            # === TRM desde datos.gov.co ===
-            trm_url = "https://www.datos.gov.co/resource/32sa-8pi3.json"
-            trm_today_resp = requests.get(trm_url, params={"vigenciadesde": today_str}).json()
-            trm_yesterday_resp = requests.get(trm_url, params={"vigenciahasta": yesterday_str}).json()
-
-            trm_data_today = trm_today_resp[0] if trm_today_resp else {}
-            trm_data_yesterday = trm_yesterday_resp[0] if trm_yesterday_resp else {}
-
-            if not trm_data_today and trm_data_yesterday:
-                vigencia_hasta = trm_data_yesterday.get("vigenciahasta", "")
-                if vigencia_hasta.startswith(today_str):
-                    trm_data_today = trm_data_yesterday
-
+            # === Obtener TRM actual ===
+            trm_data_today = self.get_trm_data_for_day(today)
             trm_today_value = float(trm_data_today.get("valor", 0))
+
+            # === Buscar TRM válida anterior (no igual) ===
+            yesterday_date, trm_data_yesterday = self.find_previous_trm(today, trm_data_today)
+            yesterday_str = yesterday_date.isoformat()
             trm_yesterday_value = float(trm_data_yesterday.get("valor", 0))
 
-            # === API externa ===
+            # === Obtener tasas internacionales ===
             access_key = settings.EXCHANGE_API_KEY
             url = f"https://api.exchangerate.host/live?access_key={access_key}"
-
             response = requests.get(url)
             data = response.json()
 
@@ -44,6 +69,7 @@ class Command(BaseCommand):
 
             quotes = data["quotes"]
 
+            # === Monedas relevantes ===
             global_currencies = ["EUR", "GBP", "JPY", "CHF"]
             regional_currencies = ["MXN", "BRL", "CLP", "PEN", "ARS", "UYU", "BOB", "PYG", "VES", "DOP"]
             relevant_currencies = global_currencies + regional_currencies
@@ -77,7 +103,7 @@ class Command(BaseCommand):
                     abs_diff[code] = 0
                     percent_diff[code] = "0.0%"
 
-            # TRM también
+            # === TRM (USD → COP) ===
             abs_diff["USD"] = round(trm_today_value - trm_yesterday_value, 2)
             if trm_yesterday_value:
                 percent = ((trm_today_value - trm_yesterday_value) / trm_yesterday_value) * 100
