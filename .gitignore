@@ -1,13 +1,21 @@
-# Ignorar archivo debug.log
-.gitignore
-debug.log
-env/
-virtual_env
-.vscode/
-media/archivo/
-*.pyc
-.codegpt
-.env
-.codegpt
+# Bytecode de Python
+__pycache__/
+*.py[cod]
+*$py.class
 
-static/
+# Entornos virtuales
+virtual_env/
+.env
+
+# Django
+media/archivo/*
+!media/archivo/.gitkeep
+staticfiles/
+debug.log
+
+# Archivos estáticos generados
+/static/
+
+# IDE/Editores
+.vscode/
+.idea/
