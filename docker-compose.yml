@@ -1,0 +1,71 @@
+services:
+  # Servicio Django para desarrollo
+  web:
+    container_name: InnReport_BACKEND_DEV
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["dev"]
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"  # Exponer directamente para pruebas
+    volumes:
+      - .:/app
+    command: >
+      python manage.py runserver 0.0.0.0:8000
+    depends_on:
+      - wait-for-db
+    networks:
+      - innreport_net
+
+  # Servicio Django para producción
+  web-prod:
+    container_name: InnReport_BACKEND_PROD
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["prod"]
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    command: >
+      gunicorn --workers=4 --bind 0.0.0.0:8000 inn_report_b.wsgi:application
+    depends_on:
+      - wait-for-db
+    networks:
+      - innreport_net
+
+  # Nginx solo para producción
+  nginx:
+    image: nginx:latest
+    container_name: innreportbackend-nginx
+    profiles: ["prod"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/certs:/etc/nginx/certs
+    depends_on:
+      - web-prod
+    networks:
+      - innreport_net
+
+  # Esperar a que MySQL local esté disponible
+  wait-for-db:
+    image: busybox
+    command: sh -c 'until nc -z host.docker.internal 3306; do echo "Esperando MySQL..."; sleep 1; done'
+    networks:
+      - innreport_net
+
+networks:
+  innreport_net:
+    driver: bridge
+
+# docker compose --profile dev up --build
+# docker compose --profile dev down
+
+# docker compose --profile prod up --build
+# docker compose --profile prod down

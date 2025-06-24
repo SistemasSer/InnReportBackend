@@ -1,0 +1,4 @@
+# Entornos virtuales
+virtual_env/
+.env
+debug.log
