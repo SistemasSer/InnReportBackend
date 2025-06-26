@@ -11,6 +11,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from core.user.serializers import UserSerializer
 from core.user.models import User
 
+from gremio.models import GremioModel
+
 
 class LoginSerializer(TokenObtainPairSerializer):
 
@@ -82,3 +84,20 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
+
+class AddGremiosToUserSerializer(serializers.ModelSerializer):
+    gremios = serializers.PrimaryKeyRelatedField(
+        queryset=GremioModel.objects.all(),  # ✅ CORRECTO
+        many=True,
+        required=True
+    )
+
+    class Meta:
+        model = User
+        fields = ['gremios']
+
+    def update(self, instance, validated_data):
+        gremios = validated_data.get('gremios', [])
+        instance.gremios.set(gremios)
+        instance.save()
+        return instance

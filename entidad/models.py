@@ -16,7 +16,7 @@ class EntidadModel(models.Model):
     Email = models.CharField(max_length=60, null=True, blank=True)
     CIIU = models.SmallIntegerField(null=True, blank=True)
     RepresentanteLegal = models.CharField(max_length=60, null=True, blank=True)
-    Gremio = models.SmallIntegerField(null=True, blank=True)
+    # Gremio = models.SmallIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 

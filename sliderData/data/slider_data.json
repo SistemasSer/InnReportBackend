@@ -1,96 +1,96 @@
 {
   "data_slider_today": {
-    "current_datetime": "2025-06-24",
+    "current_datetime": "2025-06-26",
     "current_TRM": {
-      "valor": "4080.06",
+      "valor": "4067.64",
       "unidad": "COP",
-      "vigenciadesde": "2025-06-21T00:00:00.000",
-      "vigenciahasta": "2025-06-24T00:00:00.000"
+      "vigenciadesde": "2025-06-26T00:00:00.000",
+      "vigenciahasta": "2025-06-26T00:00:00.000"
     },
     "external_data_today": {
       "base": "COP",
       "converted_from_usd": true,
       "rates": {
-        "EUR": 4728.8,
-        "GBP": 5546.69,
-        "JPY": 28.12,
-        "CHF": 5045.05,
-        "MXN": 214.41,
-        "BRL": 741.61,
-        "CLP": 4.32,
-        "PEN": 1136.77,
-        "ARS": 3.48,
-        "UYU": 100.65,
-        "BOB": 589.54,
+        "EUR": 4761.65,
+        "GBP": 5578.38,
+        "JPY": 28.18,
+        "CHF": 5082.68,
+        "MXN": 215.53,
+        "BRL": 733.75,
+        "CLP": 4.34,
+        "PEN": 1136.9,
+        "ARS": 3.42,
+        "UYU": 101.03,
+        "BOB": 588.03,
         "PYG": 0.51,
-        "VES": 39.38,
-        "DOP": 68.99
+        "VES": 38.62,
+        "DOP": 68.38
       }
     }
   },
   "data_slider_yesterday": {
-    "yesterday_datetime": "2025-06-20",
+    "yesterday_datetime": "2025-06-25",
     "yesterday_TRM": {
-      "valor": "4076.32",
+      "valor": "4081.15",
       "unidad": "COP",
-      "vigenciadesde": "2025-06-19T00:00:00.000",
-      "vigenciahasta": "2025-06-20T00:00:00.000"
+      "vigenciadesde": "2025-06-25T00:00:00.000",
+      "vigenciahasta": "2025-06-25T00:00:00.000"
     },
     "external_data_yesterday": {
       "base": "COP",
       "converted_from_usd": true,
       "rates": {
-        "EUR": 4724.47,
-        "GBP": 5541.6,
-        "JPY": 28.09,
-        "CHF": 5040.43,
-        "MXN": 214.22,
-        "BRL": 740.93,
-        "CLP": 4.32,
-        "PEN": 1135.73,
-        "ARS": 3.48,
-        "UYU": 100.56,
-        "BOB": 589.0,
+        "EUR": 4777.47,
+        "GBP": 5596.9,
+        "JPY": 28.27,
+        "CHF": 5099.56,
+        "MXN": 216.25,
+        "BRL": 736.19,
+        "CLP": 4.35,
+        "PEN": 1140.67,
+        "ARS": 3.43,
+        "UYU": 101.37,
+        "BOB": 589.98,
         "PYG": 0.51,
-        "VES": 39.34,
-        "DOP": 68.93
+        "VES": 38.75,
+        "DOP": 68.61
       }
     }
   },
   "calculated_differences": {
     "calculated_percent": {
-      "EUR": "0.09%",
-      "GBP": "0.09%",
-      "JPY": "0.11%",
-      "CHF": "0.09%",
-      "MXN": "0.09%",
-      "BRL": "0.09%",
-      "CLP": "0.0%",
-      "PEN": "0.09%",
-      "ARS": "0.0%",
-      "UYU": "0.09%",
-      "BOB": "0.09%",
+      "EUR": "-0.33%",
+      "GBP": "-0.33%",
+      "JPY": "-0.32%",
+      "CHF": "-0.33%",
+      "MXN": "-0.33%",
+      "BRL": "-0.33%",
+      "CLP": "-0.23%",
+      "PEN": "-0.33%",
+      "ARS": "-0.29%",
+      "UYU": "-0.34%",
+      "BOB": "-0.33%",
       "PYG": "0.0%",
-      "VES": "0.1%",
-      "DOP": "0.09%",
-      "USD": "0.09%"
+      "VES": "-0.34%",
+      "DOP": "-0.34%",
+      "USD": "-0.33%"
     },
     "calculated_difference": {
-      "EUR": 4.33,
-      "GBP": 5.09,
-      "JPY": 0.03,
-      "CHF": 4.62,
-      "MXN": 0.19,
-      "BRL": 0.68,
-      "CLP": 0.0,
-      "PEN": 1.04,
-      "ARS": 0.0,
-      "UYU": 0.09,
-      "BOB": 0.54,
+      "EUR": -15.82,
+      "GBP": -18.52,
+      "JPY": -0.09,
+      "CHF": -16.88,
+      "MXN": -0.72,
+      "BRL": -2.44,
+      "CLP": -0.01,
+      "PEN": -3.77,
+      "ARS": -0.01,
+      "UYU": -0.34,
+      "BOB": -1.95,
       "PYG": 0.0,
-      "VES": 0.04,
-      "DOP": 0.06,
-      "USD": 3.74
+      "VES": -0.13,
+      "DOP": -0.23,
+      "USD": -13.51
     }
   }
 }

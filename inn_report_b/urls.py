@@ -10,6 +10,7 @@ from balSup.urls import urlpatterns_balSup
 from Resumen.urls import urlpatterns_Resumen
 from exchangeRates.urls import urlpatterns_exchangeRates
 from totalaccounts.urls import urlpatterns_totalAccounts
+from gremio.urls import urlpatterns_gremio
 from sliderData import urls as urlpatterns_sliderData
 
 
@@ -28,10 +29,8 @@ urlpatterns = [
     path('api/', include(urlpatterns_exchangeRates)),
     path('api/', include(urlpatterns_totalAccounts)),
     path('api/', include(('core.routers', 'core'), namespace='core-api')),
-    # SliderPath
     path('api/', include(urlpatterns_sliderData)),
-
-
+    path('api/', include(urlpatterns_gremio)),
 ]
 
 if settings.DEBUG:
