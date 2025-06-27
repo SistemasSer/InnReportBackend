@@ -15,7 +15,9 @@ class GremioConRelacionesSerializer(serializers.ModelSerializer):
         return list(obj.entidades.values_list('entidad_id', flat=True))
 
     def get_usuarios(self, obj):
-        return list(obj.users.values_list('id', flat=True))
+        return list(
+            obj.users.values('id', 'username', 'email')
+        )
 
 class GremioSerializer(serializers.ModelSerializer):
     class Meta:
